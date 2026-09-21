@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789629811556,
+      "tag": "0000_typical_rawhide_kid",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789630000000,
+      "tag": "0001_classes",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789631000000,
+      "tag": "0002_teacher_student_workflow",
+      "breakpoints": true
+    }
+  ]
+}
