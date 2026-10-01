@@ -6,6 +6,9 @@ import {
     timestamp,
     integer,
     uniqueIndex,
+    text,
+    index,
+    unique
 } from "drizzle-orm/pg-core";
 
 export const userRoleEnum = pgEnum("user_role", [
@@ -128,4 +131,151 @@ export const attendanceRecords = pgTable(
             table.attendanceDate,
         ),
     ],
+);
+
+export const subjects = pgTable(
+    "subjects",
+    {
+        id: uuid("id").defaultRandom().primaryKey(),
+
+        name: varchar("name", {
+            length: 120,
+        }).notNull(),
+
+        code: varchar("code", {
+            length: 32,
+        }).notNull(),
+
+        createdAt: timestamp("created_at", {
+            withTimezone: true,
+        })
+            .defaultNow()
+            .notNull(),
+
+        updatedAt: timestamp("updated_at", {
+            withTimezone: true,
+        })
+            .defaultNow()
+            .notNull(),
+    },
+    (table) => [
+        uniqueIndex("subjects_code_unique").on(table.code),
+    ],
+);
+
+export const teacherSubjectAssignments = pgTable(
+    "teacher_subject_assignments",
+    {
+        id: uuid("id").defaultRandom().primaryKey(),
+
+        teacherId: uuid("teacher_id")
+            .notNull()
+            .references(() => users.id, {
+                onDelete: "cascade",
+            }),
+
+        classId: uuid("class_id")
+            .notNull()
+            .references(() => classes.id, {
+                onDelete: "cascade",
+            }),
+
+        subjectId: uuid("subject_id")
+            .notNull()
+            .references(() => subjects.id, {
+                onDelete: "cascade",
+            }),
+
+        createdAt: timestamp("created_at", {
+            withTimezone: true,
+        })
+            .defaultNow()
+            .notNull(),
+    },
+    (table) => [
+        uniqueIndex(
+            "teacher_class_subject_unique",
+        ).on(
+            table.teacherId,
+            table.classId,
+            table.subjectId,
+        ),
+    ],
+);
+
+export const submissionStatusEnum = pgEnum("submission_status", [
+  "SUBMITTED",
+  "GRADED",
+  "RETURNED",
+]);
+
+export const submissions = pgTable(
+  "submissions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    assignmentId: uuid("assignment_id")
+      .notNull()
+      .references(() => assignments.id, {
+        onDelete: "cascade",
+      }),
+
+    studentId: uuid("student_id")
+      .notNull()
+      .references(() => users.id, {
+        onDelete: "cascade",
+      }),
+
+    content: text("content"),
+
+    fileUrl: text("file_url"),
+
+    submittedAt: timestamp("submitted_at", {
+      withTimezone: true,
+    })
+      .defaultNow()
+      .notNull(),
+
+    status: submissionStatusEnum("status")
+      .default("SUBMITTED")
+      .notNull(),
+
+    marks: integer("marks"),
+
+    feedback: text("feedback"),
+
+    gradedAt: timestamp("graded_at", {
+      withTimezone: true,
+    }),
+
+    gradedBy: uuid("graded_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+
+    createdAt: timestamp("created_at", {
+      withTimezone: true,
+    })
+      .defaultNow()
+      .notNull(),
+
+    updatedAt: timestamp("updated_at", {
+      withTimezone: true,
+    })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    assignmentStudentUnique: unique().on(
+      table.assignmentId,
+      table.studentId
+    ),
+
+    assignmentIdx: index("submissions_assignment_idx").on(
+      table.assignmentId
+    ),
+
+    studentIdx: index("submissions_student_idx").on(
+      table.studentId
+    ),
+  })
 );

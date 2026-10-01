@@ -115,13 +115,29 @@ export async function isTeacherClass(teacherId: string, classId: string) {
     return Boolean(ownedClass);
 }
 
-export async function getTeacherClassDetails(classId: string, attendanceDate: string) {
-    const [classRecord] = await db
-        .select({ id: classes.id, grade: classes.grade, section: classes.section, room: classes.room })
+export async function getTeacherClassDetails(
+    teacherId: string,
+    classId: string,
+    attendanceDate: string,
+) {
+    const [classData] = await db
+        .select({
+            id: classes.id,
+            grade: classes.grade,
+            section: classes.section,
+            room: classes.room,
+            capacity: classes.capacity,
+        })
         .from(classes)
-        .where(eq(classes.id, classId));
+        .where(
+            and(
+                eq(classes.id, classId),
+                eq(classes.teacherId, teacherId),
+            ),
+        )
+        .limit(1);
 
-    if (!classRecord) {
+    if (!classData) {
         return null;
     }
 
@@ -129,19 +145,70 @@ export async function getTeacherClassDetails(classId: string, attendanceDate: st
         .select({
             id: users.id,
             email: users.email,
-            attendanceStatus: attendanceRecords.status,
+            role: users.role,
         })
         .from(classEnrollments)
-        .innerJoin(users, eq(classEnrollments.studentId, users.id))
-        .leftJoin(attendanceRecords, and(
-            eq(attendanceRecords.classId, classId),
-            eq(attendanceRecords.studentId, users.id),
-            eq(attendanceRecords.attendanceDate, attendanceDate),
-        ))
-        .where(eq(classEnrollments.classId, classId))
-        .orderBy(asc(users.email));
+        .innerJoin(
+            users,
+            eq(
+                classEnrollments.studentId,
+                users.id,
+            ),
+        )
+        .where(
+            eq(
+                classEnrollments.classId,
+                classId,
+            ),
+        )
+        .orderBy(users.email);
 
-    return { ...classRecord, students };
+    const classAssignments = await db
+        .select({
+            id: assignments.id,
+            title: assignments.title,
+            description: assignments.description,
+            dueAt: assignments.dueAt,
+            createdAt: assignments.createdAt,
+        })
+        .from(assignments)
+        .where(
+            and(
+                eq(assignments.classId, classId),
+                eq(assignments.teacherId, teacherId),
+            ),
+        )
+        .orderBy(desc(assignments.createdAt));
+
+    const attendance = await db
+        .select({
+            studentId: attendanceRecords.studentId,
+            status: attendanceRecords.status,
+        })
+        .from(attendanceRecords)
+        .where(
+            and(
+                eq(
+                    attendanceRecords.classId,
+                    classId,
+                ),
+                eq(
+                    attendanceRecords.attendanceDate,
+                    attendanceDate,
+                ),
+            ),
+        );
+
+    return {
+        class: {
+            ...classData,
+            students: students.length,
+        },
+        students,
+        assignments: classAssignments,
+        attendance,
+        attendanceDate,
+    };
 }
 
 export async function createAssignment(input: {
@@ -188,4 +255,44 @@ export async function recordAttendance(input: {
         ],
         set: { status: sql`excluded.status` },
     }).returning();
+}
+
+export async function getStudentAssignments(
+    studentId: string,
+) {
+    return db
+        .select({
+            id: assignments.id,
+            classId: assignments.classId,
+            title: assignments.title,
+            description: assignments.description,
+            dueAt: assignments.dueAt,
+            createdAt: assignments.createdAt,
+            grade: classes.grade,
+            section: classes.section,
+        })
+        .from(assignments)
+        .innerJoin(
+            classEnrollments,
+            eq(
+                assignments.classId,
+                classEnrollments.classId,
+            ),
+        )
+        .innerJoin(
+            classes,
+            eq(
+                assignments.classId,
+                classes.id,
+            ),
+        )
+        .where(
+            eq(
+                classEnrollments.studentId,
+                studentId,
+            ),
+        )
+        .orderBy(
+            asc(assignments.dueAt),
+        );
 }

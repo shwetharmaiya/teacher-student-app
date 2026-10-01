@@ -1,6 +1,14 @@
 import type { Request, Response, NextFunction } from "express";
-import type {JwtPayload } from "../utils/jwt.js";
+import type { JwtPayload } from "../utils/jwt.js";
 import { verifyToken } from "../utils/jwt.js";
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: JwtPayload;
+    }
+  }
+}
 
 export interface AuthenticatedRequest extends Request {
   user?: JwtPayload;
