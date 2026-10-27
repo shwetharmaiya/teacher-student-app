@@ -10,7 +10,6 @@ import {
     getTeacherDashboard,
     isTeacherClass,
     recordAttendance,
-    getStudentAssignments,
 } from "./academic.service.js";
 
 const teacherRouter = Router();
@@ -44,7 +43,8 @@ teacherRouter.get("/classes/:classId", async (req: AuthenticatedRequest, res) =>
         }
         const attendanceDate = z.string().date().catch(new Date().toISOString().slice(0, 10)).parse(req.query.date);
         const classRecord = await getTeacherClassDetails(req.user!.userId, classId, attendanceDate);
-        return res.json({ class: classRecord, attendanceDate });
+        if (!classRecord) return res.status(404).json({ message: "Class not found" });
+        return res.json(classRecord);
     } catch (error) {
         return res.status(400).json({ message: error instanceof Error ? error.message : "Could not load class" });
     }
@@ -80,30 +80,6 @@ studentRouter.get("/dashboard", async (req: AuthenticatedRequest, res) => {
     res.json(await getStudentDashboard(req.user!.userId));
 });
 
-studentRouter.get(
-    "/assignments",
-    async (
-        req: AuthenticatedRequest,
-        res,
-    ) => {
-        try {
-            const assignments =
-                await getStudentAssignments(
-                    req.user!.userId,
-                );
-
-            return res.json({
-                assignments,
-            });
-        } catch (error) {
-            return res.status(500).json({
-                message:
-                    error instanceof Error
-                        ? error.message
-                        : "Could not load assignments.",
-            });
-        }
-    },
-);
-
 export { studentRouter, teacherRouter };
+
+

@@ -1,116 +1,143 @@
-import { and, inArray, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "../db/index.js";
 import {
-  assignments,
-  classEnrollments,
-  submissions,
+    assignments,
+    classEnrollments,
+    classes,
+    submissions,
 } from "../db/schema.js";
 
+export const MAX_SUBMISSION_CONTENT_LENGTH = 10_000;
+
 export async function getStudentAssignments(studentId: string) {
-  const enrollments = await db
-    .select({
-      classId: classEnrollments.classId,
-    })
-    .from(classEnrollments)
-    .where(eq(classEnrollments.studentId, studentId));
+    return db
+        .select({
+            id: assignments.id,
+            classId: assignments.classId,
+            title: assignments.title,
+            description: assignments.description,
+            dueAt: assignments.dueAt,
+            createdAt: assignments.createdAt,
+            grade: classes.grade,
+            section: classes.section,
+            submission: {
+                id: submissions.id,
+                status: submissions.status,
+                submittedAt: submissions.submittedAt,
+                marks: submissions.marks,
+            },
+        })
+        .from(assignments)
+        .innerJoin(
+            classEnrollments,
+            and(
+                eq(assignments.classId, classEnrollments.classId),
+                eq(classEnrollments.studentId, studentId),
+            ),
+        )
+        .innerJoin(classes, eq(assignments.classId, classes.id))
+        .leftJoin(
+            submissions,
+            and(
+                eq(submissions.assignmentId, assignments.id),
+                eq(submissions.studentId, studentId),
+            ),
+        )
+        .orderBy(asc(assignments.dueAt));
+}
 
-  const classIds = enrollments.map(
-    (enrollment) => enrollment.classId
-  );
+export async function getStudentAssignmentDetails(
+    studentId: string,
+    assignmentId: string,
+) {
+    const [assignment] = await db
+        .select({
+            id: assignments.id,
+            classId: assignments.classId,
+            title: assignments.title,
+            description: assignments.description,
+            dueAt: assignments.dueAt,
+            createdAt: assignments.createdAt,
+            grade: classes.grade,
+            section: classes.section,
+            submission: {
+                id: submissions.id,
+                content: submissions.content,
+                status: submissions.status,
+                submittedAt: submissions.submittedAt,
+                marks: submissions.marks,
+                feedback: submissions.feedback,
+            },
+        })
+        .from(assignments)
+        .innerJoin(
+            classEnrollments,
+            and(
+                eq(assignments.classId, classEnrollments.classId),
+                eq(classEnrollments.studentId, studentId),
+            ),
+        )
+        .innerJoin(classes, eq(assignments.classId, classes.id))
+        .leftJoin(
+            submissions,
+            and(
+                eq(submissions.assignmentId, assignments.id),
+                eq(submissions.studentId, studentId),
+            ),
+        )
+        .where(eq(assignments.id, assignmentId))
+        .limit(1);
 
-  if (classIds.length === 0) {
-    return [];
-  }
-
-  const studentAssignments = await db
-    .select({
-      id: assignments.id,
-      classId: assignments.classId,
-      title: assignments.title,
-      dueAt: assignments.dueAt,
-      createdAt: assignments.createdAt,
-    })
-    .from(assignments)
-    .where(inArray(assignments.classId, classIds));
-
-  return studentAssignments;
+    return assignment ?? null;
 }
 
 export async function submitAssignment(
-  studentId: string,
-  assignmentId: string,
-  content: string
+    studentId: string,
+    assignmentId: string,
+    content: string,
 ) {
-  // 1. Check that the assignment exists
-  const [assignment] = await db
-    .select({
-      id: assignments.id,
-      classId: assignments.classId,
-    })
-    .from(assignments)
-    .where(eq(assignments.id, assignmentId))
-    .limit(1);
+    const assignment = await getStudentAssignmentDetails(studentId, assignmentId);
+    if (!assignment) {
+        throw new Error("Assignment not found or you are not enrolled in this class");
+    }
 
-  if (!assignment) {
-    throw new Error("Assignment not found");
-  }
+    if (assignment.submission?.status === "GRADED") {
+        throw new Error("This submission has been graded and can no longer be changed");
+    }
 
-  // 2. Check that the student belongs to this assignment's class
-  const [enrollment] = await db
-    .select({
-      studentId: classEnrollments.studentId,
-    })
-    .from(classEnrollments)
-    .where(
-      and(
-        eq(classEnrollments.studentId, studentId),
-        eq(classEnrollments.classId, assignment.classId)
-      )
-    )
-    .limit(1);
+    const now = new Date();
+    if (assignment.submission?.id) {
+        const [updatedSubmission] = await db
+            .update(submissions)
+            .set({
+                content,
+                submittedAt: now,
+                status: "SUBMITTED",
+                marks: null,
+                feedback: null,
+                gradedAt: null,
+                gradedBy: null,
+                updatedAt: now,
+            })
+            .where(eq(submissions.id, assignment.submission.id))
+            .returning({
+                id: submissions.id,
+                content: submissions.content,
+                status: submissions.status,
+                submittedAt: submissions.submittedAt,
+            });
+        return { submission: updatedSubmission, resubmitted: true };
+    }
 
-  if (!enrollment) {
-    throw new Error("You are not enrolled in this class");
-  }
+    const [newSubmission] = await db
+        .insert(submissions)
+        .values({ assignmentId, studentId, content })
+        .returning({
+            id: submissions.id,
+            content: submissions.content,
+            status: submissions.status,
+            submittedAt: submissions.submittedAt,
+        });
 
-  // 3. Check whether the student already submitted
-  const [existingSubmission] = await db
-    .select()
-    .from(submissions)
-    .where(
-      and(
-        eq(submissions.assignmentId, assignmentId),
-        eq(submissions.studentId, studentId)
-      )
-    )
-    .limit(1);
-
-  // 4. Update existing submission
-  if (existingSubmission) {
-    const [updatedSubmission] = await db
-      .update(submissions)
-      .set({
-        content,
-        submittedAt: new Date(),
-        status: "SUBMITTED",
-        updatedAt: new Date(),
-      })
-      .where(eq(submissions.id, existingSubmission.id))
-      .returning();
-
-    return updatedSubmission;
-  }
-
-  // 5. Create new submission
-  const [newSubmission] = await db
-    .insert(submissions)
-    .values({
-      assignmentId,
-      studentId,
-      content,
-      status: "SUBMITTED",
-    })
-    .returning();
-
-  return newSubmission;
+    return { submission: newSubmission, resubmitted: false };
 }

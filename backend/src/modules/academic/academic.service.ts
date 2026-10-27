@@ -6,6 +6,7 @@ import {
     classEnrollments,
     classes,
     users,
+    teacherSubjectAssignments,
 } from "../../db/schema.js";
 
 export async function getTeacherDashboard(teacherId: string) {
@@ -98,21 +99,28 @@ export async function getStudentDashboard(studentId: string) {
 }
 
 export async function isTeacherClass(teacherId: string, classId: string) {
-    const [classRecord] = await db
-        .select({ id: classes.id })
-        .from(classes)
-        .where(eq(classes.id, classId));
-
-    if (!classRecord) {
-        return false;
-    }
-
-    const [ownedClass] = await db
-        .select({ id: classes.id })
-        .from(classes)
-        .where(sql`${classes.id} = ${classId} and ${classes.teacherId} = ${teacherId}`)
+    const [subjectAssignment] = await db
+        .select({ id: teacherSubjectAssignments.id })
+        .from(teacherSubjectAssignments)
+        .where(and(
+            eq(teacherSubjectAssignments.teacherId, teacherId),
+            eq(teacherSubjectAssignments.classId, classId),
+        ))
         .limit(1);
-    return Boolean(ownedClass);
+
+    if (subjectAssignment) return true;
+
+    // Keep support for classes assigned directly through the legacy class.teacherId field.
+    const [directAssignment] = await db
+        .select({ id: classes.id })
+        .from(classes)
+        .where(and(
+            eq(classes.id, classId),
+            eq(classes.teacherId, teacherId),
+        ))
+        .limit(1);
+
+    return Boolean(directAssignment);
 }
 
 export async function getTeacherClassDetails(
@@ -129,12 +137,7 @@ export async function getTeacherClassDetails(
             capacity: classes.capacity,
         })
         .from(classes)
-        .where(
-            and(
-                eq(classes.id, classId),
-                eq(classes.teacherId, teacherId),
-            ),
-        )
+        .where(eq(classes.id, classId))
         .limit(1);
 
     if (!classData) {
@@ -257,42 +260,7 @@ export async function recordAttendance(input: {
     }).returning();
 }
 
-export async function getStudentAssignments(
-    studentId: string,
-) {
-    return db
-        .select({
-            id: assignments.id,
-            classId: assignments.classId,
-            title: assignments.title,
-            description: assignments.description,
-            dueAt: assignments.dueAt,
-            createdAt: assignments.createdAt,
-            grade: classes.grade,
-            section: classes.section,
-        })
-        .from(assignments)
-        .innerJoin(
-            classEnrollments,
-            eq(
-                assignments.classId,
-                classEnrollments.classId,
-            ),
-        )
-        .innerJoin(
-            classes,
-            eq(
-                assignments.classId,
-                classes.id,
-            ),
-        )
-        .where(
-            eq(
-                classEnrollments.studentId,
-                studentId,
-            ),
-        )
-        .orderBy(
-            asc(assignments.dueAt),
-        );
-}
+
+
+
+

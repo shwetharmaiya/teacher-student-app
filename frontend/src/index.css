@@ -1519,3 +1519,129 @@ a { color: inherit; }
         box-sizing: border-box;
     }
 }
+.student-assignment-status.submitted {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.student-assignment-detail-page {
+    max-width: 900px;
+}
+
+.student-assignment-back {
+    display: inline-block;
+    margin-bottom: 18px;
+    color: #475569;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.student-assignment-detail-card {
+    padding: 28px;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 10px 30px rgb(15 23 42 / 5%);
+}
+
+.student-assignment-detail-card h1 {
+    margin: 22px 0 8px;
+    color: #0f172a;
+    font-size: 30px;
+}
+
+.student-assignment-due,
+.student-assignment-unsubmitted,
+.student-submission-summary p,
+.student-submission-policy {
+    color: #64748b;
+}
+
+.student-assignment-detail-description {
+    margin: 22px 0;
+    line-height: 1.7;
+    white-space: pre-wrap;
+}
+
+.student-submission-summary,
+.student-assignment-unsubmitted {
+    margin: 24px 0;
+    padding: 16px;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.student-submission-summary h2 {
+    margin: 0 0 8px;
+    font-size: 17px;
+    text-transform: capitalize;
+}
+
+.student-submission-summary p {
+    margin: 6px 0;
+}
+
+.student-submission-form {
+    display: grid;
+    gap: 10px;
+    margin-top: 26px;
+}
+
+.student-submission-form label {
+    font-weight: 700;
+}
+
+.student-submission-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    font: inherit;
+    line-height: 1.55;
+    resize: vertical;
+}
+
+.student-submission-form textarea:focus {
+    border-color: #2563eb;
+    outline: 3px solid rgb(37 99 235 / 15%);
+}
+
+.student-submission-form-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.student-submission-form-footer > span,
+.student-submission-policy {
+    font-size: 13px;
+}
+
+.student-submission-success {
+    margin: 16px 0;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.student-submission-locked {
+    margin-top: 24px;
+    padding: 14px;
+    border-radius: 10px;
+    background: #f1f5f9;
+    color: #475569;
+}
+
+@media (max-width: 700px) {
+    .student-assignment-detail-card {
+        padding: 20px 16px;
+    }
+
+    .student-submission-form-footer {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}

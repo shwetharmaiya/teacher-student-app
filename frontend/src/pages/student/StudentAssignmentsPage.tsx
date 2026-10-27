@@ -1,162 +1,121 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { apiFetch } from "../../services/api/client";
-import { useNavigate } from "react-router-dom";
+
+type Submission = {
+    id: string;
+    status: "SUBMITTED" | "GRADED" | "RETURNED";
+    submittedAt: string;
+    marks: number | null;
+};
 
 type Assignment = {
     id: string;
-    classId: string;
     title: string;
-    description?: string | null;
     dueAt: string;
-    createdAt: string;
     grade: string;
     section: string;
+    submission: Submission | null;
 };
 
-type AssignmentsResponse = {
-    assignments: Assignment[];
-};
+type AssignmentsResponse = { assignments: Assignment[] };
+
+function isOverdue(dueAt: string) {
+    return new Date(dueAt).getTime() < Date.now();
+}
+
+function formatDate(dateString: string) {
+    return new Date(dateString).toLocaleDateString(undefined, {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+    });
+}
 
 export default function StudentAssignmentsPage() {
     const [assignments, setAssignments] = useState<Assignment[]>([]);
-
     const [loading, setLoading] = useState(true);
-
     const [error, setError] = useState("");
-    const navigate = useNavigate();
-    useEffect(() => {
-        async function loadAssignments() {
-            try {
-                setLoading(true);
-                setError("");
 
-                const response = await apiFetch<AssignmentsResponse>(
-                    "/student/assignments",
-                );
-
-                setAssignments(response.assignments ?? []);
-            } catch (err) {
-                setError(
-                    err instanceof Error
-                        ? err.message
-                        : "Could not load assignments.",
-                );
-            } finally {
-                setLoading(false);
-            }
+    const loadAssignments = useCallback(async () => {
+        setLoading(true);
+        setError("");
+        try {
+            const response = await apiFetch<AssignmentsResponse>("/student/assignments");
+            setAssignments(response.assignments ?? []);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Could not load assignments.");
+        } finally {
+            setLoading(false);
         }
-
-        void loadAssignments();
     }, []);
 
-    function formatDueDate(dateString: string) {
-        return new Date(dateString).toLocaleDateString(undefined, {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-        });
-    }
-
-    function isOverdue(dateString: string) {
-        return new Date(dateString).getTime() < Date.now();
-    }
-
-    if (loading) {
-        return (
-            <div className="student-assignments-page">
-                <div className="student-assignments-state">
-                    Loading assignments...
-                </div>
-            </div>
-        );
-    }
+    useEffect(() => {
+        void loadAssignments();
+    }, [loadAssignments]);
 
     return (
         <div className="student-assignments-page">
             <header className="student-assignments-header">
                 <div>
                     <p className="student-page-eyebrow">My Learning</p>
-
                     <h1>My Assignments</h1>
-
                     <p>View work assigned to you by your teachers.</p>
                 </div>
-
                 <div className="student-assignment-count">
                     {assignments.length}
-                    <span>
-                        {assignments.length === 1
-                            ? " Assignment"
-                            : " Assignments"}
-                    </span>
+                    <span>{assignments.length === 1 ? " Assignment" : " Assignments"}</span>
                 </div>
             </header>
 
-            {error && <div className="student-assignments-error">{error}</div>}
-
-            {assignments.length === 0 ? (
+            {loading ? (
+                <div className="student-assignments-state" role="status">Loading assignments…</div>
+            ) : error ? (
+                <div className="student-assignments-error" role="alert">
+                    <p>{error}</p>
+                    <button type="button" className="workspace-primary-button" onClick={() => void loadAssignments()}>
+                        Try again
+                    </button>
+                </div>
+            ) : assignments.length === 0 ? (
                 <div className="student-empty-assignments">
-                    <div className="student-empty-icon">📚</div>
-
+                    <div className="student-empty-icon" aria-hidden="true">📚</div>
                     <h2>No assignments yet</h2>
-
-                    <p>Your teachers haven't assigned any work yet.</p>
+                    <p>Your teachers haven’t assigned any work to your classes yet.</p>
                 </div>
             ) : (
                 <div className="student-assignment-grid">
                     {assignments.map((assignment) => {
                         const overdue = isOverdue(assignment.dueAt);
+                        const submission = assignment.submission;
+                        const statusLabel = submission?.status === "GRADED"
+                            ? `Graded${submission.marks === null ? "" : ` · ${submission.marks} marks`}`
+                            : submission?.status === "RETURNED"
+                                ? "Returned"
+                                : submission
+                                    ? "Submitted"
+                                    : overdue ? "Overdue" : "Not submitted";
+                        const statusClass = submission
+                            ? "student-assignment-status submitted"
+                            : overdue
+                                ? "student-assignment-status overdue"
+                                : "student-assignment-status";
 
                         return (
-                            <article
-                                key={assignment.id}
-                                className="student-assignment-card"
-                            >
+                            <article key={assignment.id} className="student-assignment-card">
                                 <div className="student-assignment-card-top">
-                                    <span className="student-assignment-class">
-                                        {assignment.grade} -{" "}
-                                        {assignment.section}
-                                    </span>
-
-                                    <span
-                                        className={
-                                            overdue
-                                                ? "student-assignment-status overdue"
-                                                : "student-assignment-status"
-                                        }
-                                    >
-                                        {overdue ? "Overdue" : "Upcoming"}
-                                    </span>
+                                    <span className="student-assignment-class">{assignment.grade} - {assignment.section}</span>
+                                    <span className={statusClass}>{statusLabel}</span>
                                 </div>
-
                                 <h2>{assignment.title}</h2>
-
-                                {assignment.description && (
-                                    <p className="student-assignment-description">
-                                        {assignment.description}
-                                    </p>
-                                )}
-
                                 <div className="student-assignment-footer">
                                     <div>
                                         <span>Due</span>
-
-                                        <strong>
-                                            {formatDueDate(assignment.dueAt)}
-                                        </strong>
+                                        <strong>{formatDate(assignment.dueAt)}</strong>
                                     </div>
-
-                                    <button
-                                        type="button"
-                                        className="workspace-primary-button"
-                                        onClick={() =>
-                                            navigate(
-                                                `/student/assignments/${assignment.id}`,
-                                            )
-                                        }
-                                    >
-                                        Open
-                                    </button>
+                                    <Link className="workspace-primary-button" to={`/student/assignments/${assignment.id}`}>
+                                        {submission ? "View work" : "Open"}
+                                    </Link>
                                 </div>
                             </article>
                         );

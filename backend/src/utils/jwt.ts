@@ -1,8 +1,7 @@
 import jwt from "jsonwebtoken";
 
 export interface JwtPayload {
-  id: string;
-  email: string;
+  userId: string;
   role: "ADMIN" | "TEACHER" | "STUDENT" | "PARENT";
 }
 
@@ -13,8 +12,5 @@ export function createToken(payload: JwtPayload) {
 }
 
 export function verifyToken(token: string): JwtPayload {
-  return jwt.verify(
-    token,
-    process.env.JWT_SECRET!
-  ) as JwtPayload;
+  return jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
 }

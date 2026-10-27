@@ -29,22 +29,25 @@ type ClassDetailsResponse = {
         grade: string;
         section: string;
         room: string;
-        students: Student[];
+        capacity: number;
+        students: number;
     };
-    assignments?: Array<{
+    students: Student[];
+    assignments: Array<{
         id: string;
         title: string;
         description?: string | null;
         dueAt: string;
         createdAt: string;
     }>;
-    attendance?: Array<{
+    attendance: Array<{
         studentId: string;
         status: "PRESENT" | "ABSENT" | "LATE";
     }>;
     attendanceDate: string;
 };
 
+type Assignment = NonNullable<ClassDetailsResponse["assignments"]>[number];
 type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE";
 
 type AttendanceMap = Record<string, AttendanceStatus>;
@@ -134,7 +137,7 @@ export default function TeacherClassWorkspacePage() {
 
                 const initialAttendance: AttendanceMap = {};
 
-                (detailsResponse.class.students ?? []).forEach((student) => {
+                (detailsResponse.students ?? []).forEach((student) => {
                     initialAttendance[student.id] = "PRESENT";
                 });
 
@@ -174,7 +177,7 @@ export default function TeacherClassWorkspacePage() {
             setError("");
             setSuccess("");
 
-            const records = classDetails.class.students.map((student) => ({
+            const records = classDetails.students.map((student) => ({
                 studentId: student.id,
                 status: attendance[student.id] || "PRESENT",
             }));
@@ -183,7 +186,7 @@ export default function TeacherClassWorkspacePage() {
                 method: "PUT",
                 body: JSON.stringify({
                     attendanceDate,
-                    records,
+                    entries: records,
                 }),
             });
 
@@ -240,9 +243,8 @@ export default function TeacherClassWorkspacePage() {
     if (!assignment || !classDetails) {
         return null;
     }
-    const students = classDetails.class.students ?? [];
+    const students = classDetails.students ?? [];
     const assignments = classDetails.assignments ?? [];
-    const attendanceRecords = classDetails.attendance ?? [];
 
     const presentCount = Object.values(attendance).filter(
         (status) => status === "PRESENT",
@@ -702,3 +704,4 @@ export default function TeacherClassWorkspacePage() {
         </div>
     );
 }
+

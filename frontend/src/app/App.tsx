@@ -20,6 +20,7 @@ import TeachingAssignmentsPage from "../pages/admin/TeachingAssignmentsPage";
 import TeacherTeachingPage from "../pages/teacher/TeacherTeachingPage";
 import TeacherClassWorkspacePage from "../pages/teacher/TeacherClassWorkspacePage";
 import StudentAssignmentsPage from "../pages/student/StudentAssignmentsPage";
+import StudentAssignmentDetailsPage from "../pages/student/StudentAssignmentDetailsPage";
 import "../index.css";
 
 export default function App() {
@@ -111,23 +112,11 @@ export default function App() {
                                 path="/student/dashboard"
                                 element={<StudentDashboard />}
                             />
-                            <Route
-    path="/student/assignments"
-    element={
-        <ProtectedRoute allowedRoles={["STUDENT"]}>
-            <StudentAssignmentsPage />
-        </ProtectedRoute>
-    }
-/>
+                            <Route path="/student/assignments" element={<StudentAssignmentsPage />} />
+                            <Route path="/student/assignments/:assignmentId" element={<StudentAssignmentDetailsPage />} />
                             <Route
                                 path="/student/classes"
                                 element={<RoleFeaturePage title="My classes" />}
-                            />
-                            <Route
-                                path="/student/assignments"
-                                element={
-                                    <RoleFeaturePage title="Assignments" />
-                                }
                             />
                             <Route
                                 path="/student/marks"

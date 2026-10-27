@@ -1,1992 +1,302 @@
 # Teacher–Student App
 
-A full-stack teacher–student management application built with **React + Vite** on the frontend and **Node.js + Express + TypeScript + Drizzle ORM + PostgreSQL** on the backend.
-
-The application is designed around four roles:
-
-- **ADMIN**
-- **TEACHER**
-- **STUDENT**
-- **PARENT**
-
-This README captures the architecture, authentication plan, routing strategy, database direction, feature ideas, API structure, and implementation roadmap discussed so far.
-
----
-
-## 1. Project Goals
-
-The application should provide a role-based platform where:
-
-### Admin
-- Manage users
-- Manage teachers
-- Manage students
-- Manage parents
-- Manage classes
-- View reports
-- Configure application data
-
-### Teacher
-- View assigned classes
-- View students
-- Take attendance
-- Create assignments
-- Review submissions
-- Enter/update grades
-- Communicate with students/parents
-
-### Student
-- View classes and subjects
-- View assignments
-- Submit assignments
-- View grades
-- View attendance
-- View announcements
-
-### Parent
-- View linked child/student
-- View attendance
-- View assignments
-- View grades
-- Receive announcements
-- Communicate with teachers
-
----
-
-# 2. Technology Stack
-
-## Frontend
-
-- React
-- TypeScript
-- Vite
-- React Router
-- React Context
-- Fetch API
-- CSS/component library as required
-
-## Backend
-
-- Node.js
-- Express 5
-- TypeScript
-- JWT
-- bcrypt
-- Zod
-- CORS
-- dotenv
-
-## Database
-
-- PostgreSQL
-- Drizzle ORM
-- Drizzle Kit
-
----
-
-# 3. High-Level Architecture
+A role-based school management application built as a React and TypeScript frontend with an Express and TypeScript REST API backed by PostgreSQL and Drizzle ORM. The current implementation supports account registration and login, class and enrollment administration, teacher-to-class/subject assignments, teacher class workspaces, attendance, and assignment publishing and student submissions.
 
-```text
-                         React Frontend
-                              │
-                              │ HTTP/JSON
-                              ▼
-                     Express REST API
-                              │
-                 ┌────────────┴────────────┐
-                 │                         │
-          Authentication              Authorization
-             JWT                    Role checking
-                 │                         │
-                 └────────────┬────────────┘
-                              ▼
-                         Controllers
-                              │
-                              ▼
-                           Services
-                              │
-                              ▼
-                         Drizzle ORM
-                              │
-                              ▼
-                         PostgreSQL
-```
-
-The recommended backend request flow is:
-
-```text
-Route
-  ↓
-Authentication middleware
-  ↓
-Role authorization middleware
-  ↓
-Controller
-  ↓
-Service
-  ↓
-Database
-```
-
----
-
-# 4. Suggested Project Structure
-
-## Backend
-
-```text
-backend/
-└── src/
-    ├── db/
-    │   ├── index.ts
-    │   └── schema.ts
-    │
-    ├── middleware/
-    │   ├── auth.middleware.ts
-    │   └── role.middleware.ts
-    │
-    ├── utils/
-    │   └── jwt.ts
-    │
-    ├── modules/
-    │   ├── auth/
-    │   │   ├── auth.routes.ts
-    │   │   ├── auth.controller.ts
-    │   │   ├── auth.service.ts
-    │   │   └── auth.validation.ts
-    │   │
-    │   └── users/
-    │       ├── user.routes.ts
-    │       ├── user.controller.ts
-    │       └── user.service.ts
-    │
-    └── server.ts
-```
-
-## Frontend
-
-```text
-frontend/
-└── src/
-    ├── auth/
-    │   ├── AuthContext.tsx
-    │   ├── ProtectedRoute.tsx
-    │   └── RoleRoute.tsx
-    │
-    ├── pages/
-    │   ├── Login.tsx
-    │   │
-    │   ├── admin/
-    │   │   └── AdminDashboard.tsx
-    │   │
-    │   ├── teacher/
-    │   │   └── TeacherDashboard.tsx
-    │   │
-    │   ├── student/
-    │   │   └── StudentDashboard.tsx
-    │   │
-    │   └── parent/
-    │       └── ParentDashboard.tsx
-    │
-    ├── components/
-    │   ├── layout/
-    │   ├── navigation/
-    │   ├── common/
-    │   └── forms/
-    │
-    ├── services/
-    │   └── api.ts
-    │
-    ├── types/
-    │   └── index.ts
-    │
-    ├── App.tsx
-    └── main.tsx
-```
-
----
-
-# 5. User Roles
-
-The application uses four roles:
-
-```ts
-export type UserRole =
-  | "ADMIN"
-  | "TEACHER"
-  | "STUDENT"
-  | "PARENT";
-```
-
-The database user currently has a structure similar to:
-
-```ts
-{
-  id: string;
-  email: string;
-  passwordHash: string;
-  role: "ADMIN" | "TEACHER" | "STUDENT" | "PARENT";
-  createdAt: Date;
-  updatedAt: Date;
-}
-```
-
-Important:
-
-- The database field is `passwordHash`, not `password`.
-- User IDs are strings.
-- Passwords must never be stored as plain text.
-
----
-
-# 6. Authentication
-
-JWT authentication is used.
-
-The basic authentication flow is:
-
-```text
-User enters email/password
-        ↓
-POST /api/auth/login
-        ↓
-Validate request with Zod
-        ↓
-Find user in PostgreSQL
-        ↓
-Compare password using bcrypt
-        ↓
-Create JWT
-        ↓
-Return token + user
-        ↓
-React stores token
-        ↓
-React restores session using /me
-```
-
----
-
-# 7. Authentication API
-
-Current authentication endpoints:
-
-```text
-POST /api/auth/register
-POST /api/auth/login
-POST /api/auth/logout
-GET  /api/auth/me
-```
-
-## Register
-
-```text
-POST /api/auth/register
-```
-
-Example body:
-
-```json
-{
-  "email": "teacher@example.com",
-  "password": "password123",
-  "role": "TEACHER"
-}
-```
-
-## Login
-
-```text
-POST /api/auth/login
-```
-
-Example body:
-
-```json
-{
-  "email": "teacher@example.com",
-  "password": "password123"
-}
-```
-
-Example response:
-
-```json
-{
-  "token": "JWT_TOKEN",
-  "user": {
-    "id": "USER_ID",
-    "email": "teacher@example.com",
-    "role": "TEACHER"
-  }
-}
-```
-
-## Current user
-
-```text
-GET /api/auth/me
-```
-
-Requires:
-
-```text
-Authorization: Bearer <JWT>
-```
-
-Example response:
-
-```json
-{
-  "user": {
-    "id": "USER_ID",
-    "email": "teacher@example.com",
-    "role": "TEACHER"
-  }
-}
-```
-
----
-
-# 8. JWT
-
-JWT payload:
-
-```ts
-export interface JwtPayload {
-  userId: string;
-  role: UserRole;
-}
-```
-
-JWT creation:
-
-```ts
-const token = createToken({
-  userId: user.id,
-  role: user.role,
-});
-```
-
-The token should have an expiration.
-
-Current planned expiration:
-
-```text
-1 day
-```
-
-The JWT secret comes from an environment variable:
-
-```text
-JWT_SECRET=your-secret
-```
-
-Never commit the real JWT secret to Git.
-
----
-
-# 9. Authentication Middleware
-
-The authentication middleware checks:
-
-```text
-Authorization: Bearer <token>
-```
-
-If no token exists:
-
-```text
-401 Authentication required
-```
-
-If the token is invalid or expired:
-
-```text
-401 Invalid or expired token
-```
-
-If valid, the decoded user information is attached to the request.
-
-Conceptually:
-
-```text
-Request
-  ↓
-Authorization header
-  ↓
-Extract Bearer token
-  ↓
-Verify JWT
-  ↓
-req.user = JWT payload
-  ↓
-next()
-```
-
----
-
-# 10. Role Authorization
-
-Authentication and authorization are separate concepts.
-
-### Authentication
-
-Answers:
-
-> Who is this user?
-
-### Authorization
-
-Answers:
-
-> Is this user allowed to access this resource?
-
-The role middleware uses:
-
-```ts
-authorizeRoles("ADMIN")
-```
-
-or:
-
-```ts
-authorizeRoles("ADMIN", "TEACHER")
-```
-
-Expected status codes:
-
-```text
-401 → User is not authenticated
-
-403 → User is authenticated but does not have permission
-```
-
-Example:
-
-```ts
-router.get(
-  "/teachers",
-  authenticate,
-  authorizeRoles("ADMIN", "TEACHER"),
-  getTeachers
-);
-```
-
----
-
-# 11. Do Not Protect Login/Register
-
-Authentication should not be applied globally.
-
-This is incorrect:
-
-```ts
-app.use(authenticate);
-```
-
-because `/login` and `/register` would require an existing JWT.
-
-Instead:
-
-```ts
-router.post("/register", register);
-router.post("/login", login);
-
-router.get(
-  "/me",
-  authenticate,
-  getMe
-);
-```
-
----
-
-# 12. React AuthContext
-
-The React application should have one central authentication state.
-
-It should expose:
-
-```ts
-interface AuthContextValue {
-  user: User | null;
-  token: string | null;
-  loading: boolean;
-  login: (
-    email: string,
-    password: string
-  ) => Promise<User>;
-  logout: () => void;
-}
-```
-
-Components can then use:
-
-```tsx
-const {
-  user,
-  token,
-  loading,
-  login,
-  logout,
-} = useAuth();
-```
-
-This prevents every page from implementing authentication independently.
-
----
-
-# 13. Persisting Authentication
-
-After login:
-
-```text
-JWT
- ↓
-localStorage
- ↓
-accessToken
-```
-
-For the current implementation:
-
-```ts
-localStorage.setItem(
-  "accessToken",
-  data.token
-);
-```
-
-When React starts:
-
-```text
-Read accessToken
-      ↓
-Token exists?
-      ↓
-GET /api/auth/me
-      ↓
-Valid?
-   ↙     ↘
- yes      no
-  ↓        ↓
-restore   clear token
- user
-```
-
-This allows the user to remain logged in after a browser refresh.
-
-> Security note: localStorage is convenient for a first implementation, but a production authentication architecture can use secure, HttpOnly cookies and refresh-token/session handling to reduce token exposure to JavaScript.
-
----
-
-# 14. Protected React Routes
-
-React should prevent unauthenticated users from accessing protected pages.
-
-Example:
-
-```tsx
-<Route element={<ProtectedRoute />}>
-  ...
-</Route>
-```
-
-`ProtectedRoute` checks:
-
-```text
-Loading?
-  ↓
-Show loading UI
-
-No user?
-  ↓
-Redirect to /login
-
-User exists?
-  ↓
-Render protected page
-```
-
-Important:
-
-> React route protection is primarily navigation/UX protection. It is not the backend security boundary.
-
-The backend must independently authenticate and authorize API requests.
-
----
-
-# 15. Role-Based React Routes
-
-Use a separate `RoleRoute`.
-
-Example:
-
-```tsx
-<Route element={
-  <RoleRoute allowedRoles={["ADMIN"]} />
-}>
-  <Route
-    path="/admin"
-    element={<AdminDashboard />}
-  />
-</Route>
-```
-
-Role mapping:
-
-```text
-ADMIN
-  → /admin
-
-TEACHER
-  → /teacher
-
-STUDENT
-  → /student
-
-PARENT
-  → /parent
-```
-
-A logged-in student visiting:
-
-```text
-/teacher
-```
-
-should be redirected to:
-
-```text
-/unauthorized
-```
-
----
-
-# 16. Recommended React Routing
-
-```tsx
-<BrowserRouter>
-  <Routes>
-
-    {/* Public */}
-    <Route
-      path="/login"
-      element={<Login />}
-    />
-
-    <Route
-      path="/unauthorized"
-      element={<Unauthorized />}
-    />
-
-    {/* Authenticated */}
-    <Route element={<ProtectedRoute />}>
-
-      {/* Admin */}
-      <Route element={
-        <RoleRoute allowedRoles={["ADMIN"]} />
-      }>
-        <Route
-          path="/admin"
-          element={<AdminDashboard />}
-        />
-      </Route>
-
-      {/* Teacher */}
-      <Route element={
-        <RoleRoute allowedRoles={["TEACHER"]} />
-      }>
-        <Route
-          path="/teacher"
-          element={<TeacherDashboard />}
-        />
-      </Route>
-
-      {/* Student */}
-      <Route element={
-        <RoleRoute allowedRoles={["STUDENT"]} />
-      }>
-        <Route
-          path="/student"
-          element={<StudentDashboard />}
-        />
-      </Route>
-
-      {/* Parent */}
-      <Route element={
-        <RoleRoute allowedRoles={["PARENT"]} />
-      }>
-        <Route
-          path="/parent"
-          element={<ParentDashboard />}
-        />
-      </Route>
-
-    </Route>
-
-  </Routes>
-</BrowserRouter>
-```
-
----
-
-# 17. Login Flow
-
-The login page should use `AuthContext` rather than calling the authentication API directly.
-
-Flow:
-
-```text
-Login.tsx
-   ↓
-useAuth()
-   ↓
-login(email, password)
-   ↓
-POST /api/auth/login
-   ↓
-JWT + user
-   ↓
-AuthContext updates
-   ↓
-Navigate according to role
-```
-
-Role-based navigation:
-
-```ts
-switch (user.role) {
-  case "ADMIN":
-    navigate("/admin");
-    break;
-
-  case "TEACHER":
-    navigate("/teacher");
-    break;
-
-  case "STUDENT":
-    navigate("/student");
-    break;
-
-  case "PARENT":
-    navigate("/parent");
-    break;
-}
-```
-
----
-
-# 18. Dashboard Ideas
-
-## Admin Dashboard
-
-Potential sections:
-
-```text
-Dashboard
-├── Overview
-├── Users
-│   ├── All Users
-│   ├── Teachers
-│   ├── Students
-│   └── Parents
-├── Classes
-├── Subjects
-├── Academic Years
-├── Reports
-├── Announcements
-└── Settings
-```
-
-Useful statistics:
-
-- Total students
-- Total teachers
-- Total parents
-- Total classes
-- Attendance overview
-- Recent registrations
-- Recent announcements
-
----
-
-# 19. Teacher Dashboard
-
-Potential sections:
-
-```text
-Teacher Dashboard
-├── Overview
-├── My Classes
-├── Students
-├── Attendance
-├── Assignments
-├── Submissions
-├── Grades
-├── Announcements
-└── Profile
-```
-
-Teacher capabilities:
-
-### Classes
-- View assigned classes
-- View class students
-- View subjects taught
-
-### Attendance
-- Mark attendance
-- Edit attendance
-- View attendance history
-- View attendance summaries
-
-### Assignments
-- Create assignment
-- Set due date
-- Add instructions
-- Attach files
-- View submissions
-- Grade submissions
-
-### Grades
-- Enter marks
-- Update marks
-- Add remarks
-- View student performance
-
----
-
-# 20. Student Dashboard
-
-Potential sections:
-
-```text
-Student Dashboard
-├── Overview
-├── My Classes
-├── Subjects
-├── Assignments
-├── Submissions
-├── Grades
-├── Attendance
-├── Announcements
-└── Profile
-```
-
-Student capabilities:
-
-### Classes
-- View enrolled classes
-- View subjects
-- View teachers
-
-### Assignments
-- View pending assignments
-- View completed assignments
-- Submit assignments
-- See due dates
-- See grades/feedback
-
-### Grades
-- View subject-wise grades
-- View assignment marks
-- View teacher feedback
-
-### Attendance
-- View attendance percentage
-- View attendance history
-
----
-
-# 21. Parent Dashboard
-
-Potential sections:
-
-```text
-Parent Dashboard
-├── Overview
-├── My Children
-├── Attendance
-├── Assignments
-├── Grades
-├── Announcements
-├── Teacher Communication
-└── Profile
-```
-
-Parent capabilities:
-
-- View linked children
-- View attendance
-- View grades
-- View assignment status
-- View teacher feedback
-- Receive school announcements
-- Communicate with teachers
-
-A parent may eventually have multiple children:
-
-```text
-Parent
- ├── Child 1
- ├── Child 2
- └── Child 3
-```
-
----
-
-# 22. Common Dashboard Layout
-
-Instead of duplicating navigation in every dashboard, create a common layout:
-
-```text
-DashboardLayout
-├── Sidebar
-├── Header
-└── Main Content
-```
-
-Suggested structure:
-
-```text
-src/components/layout/
-├── DashboardLayout.tsx
-├── Sidebar.tsx
-├── Header.tsx
-└── PageContainer.tsx
-```
-
-The sidebar can change based on role.
-
-Example:
-
-```text
-ADMIN
-  → Users
-  → Classes
-  → Subjects
-  → Reports
-
-TEACHER
-  → Classes
-  → Students
-  → Attendance
-  → Assignments
-  → Grades
-
-STUDENT
-  → Classes
-  → Assignments
-  → Grades
-  → Attendance
-
-PARENT
-  → Children
-  → Attendance
-  → Assignments
-  → Grades
-```
-
----
-
-# 23. Database Design Ideas
-
-The initial `users` table can be expanded with role-specific entities.
-
-Possible tables:
-
-```text
-users
-teachers
-students
-parents
-parent_students
-classes
-subjects
-class_students
-teacher_classes
-attendance
-assignments
-assignment_submissions
-grades
-announcements
-messages
-```
-
----
-
-# 24. Users
-
-Basic user account:
-
-```text
-users
-------
-id
-email
-password_hash
-role
-created_at
-updated_at
-```
-
----
-
-# 25. Teacher Profile
-
-Separate teacher profile data from authentication data.
-
-Possible fields:
-
-```text
-teachers
---------
-id
-user_id
-first_name
-last_name
-phone
-employee_id
-department
-joining_date
-```
-
-Relationship:
-
-```text
-users
-  │
-  └── teachers
-```
-
----
-
-# 26. Student Profile
-
-```text
-students
---------
-id
-user_id
-first_name
-last_name
-student_id
-date_of_birth
-phone
-class_id
-```
-
-The student's authentication identity remains in `users`.
-
-Student-specific information remains in `students`.
-
----
-
-# 27. Parent Profile
-
-```text
-parents
--------
-id
-user_id
-first_name
-last_name
-phone
-```
-
-A parent-child relationship should use a join table:
-
-```text
-parent_students
----------------
-parent_id
-student_id
-relationship
-```
-
-This allows one parent to have multiple children and potentially multiple parents/guardians per student.
-
----
-
-# 28. Classes
-
-```text
-classes
--------
-id
-name
-grade
-section
-academic_year
-created_at
-```
-
-Example:
-
-```text
-Grade 8 - A
-Grade 8 - B
-Grade 9 - A
-```
-
----
-
-# 29. Subjects
-
-```text
-subjects
---------
-id
-name
-code
-```
-
-Examples:
-
-```text
-Mathematics
-Science
-English
-History
-Computer Science
-```
-
----
-
-# 30. Class/Student Relationship
-
-Use a join table when a student can be enrolled in classes over time:
-
-```text
-class_students
---------------
-class_id
-student_id
-academic_year
-```
-
-This is more flexible than putting only `class_id` directly on a student.
-
----
-
-# 31. Teacher/Class Relationship
-
-Teachers can teach multiple classes and classes can have multiple teachers.
-
-```text
-teacher_classes
----------------
-teacher_id
-class_id
-subject_id
-```
-
-This can represent:
-
-```text
-Teacher A → Grade 8A → Mathematics
-Teacher A → Grade 8B → Mathematics
-Teacher B → Grade 8A → Science
-```
-
----
-
-# 32. Attendance
-
-Possible structure:
-
-```text
-attendance
-----------
-id
-student_id
-class_id
-date
-status
-marked_by
-created_at
-```
-
-Status could be:
-
-```text
-PRESENT
-ABSENT
-LATE
-EXCUSED
-```
-
-Teacher workflow:
-
-```text
-Teacher
-  ↓
-Select class
-  ↓
-Select date
-  ↓
-List students
-  ↓
-Mark attendance
-  ↓
-Save
-```
-
----
-
-# 33. Assignments
-
-```text
-assignments
------------
-id
-teacher_id
-class_id
-subject_id
-title
-description
-due_date
-created_at
-updated_at
-```
-
-Teacher creates an assignment.
-
-Students see it in their dashboard.
-
----
-
-# 34. Assignment Submissions
-
-```text
-assignment_submissions
-----------------------
-id
-assignment_id
-student_id
-content
-submitted_at
-status
-```
-
-Possible statuses:
-
-```text
-PENDING
-SUBMITTED
-LATE
-GRADED
-```
+## Project status
 
----
+This is an in-progress application. The core app shell and several academic workflows are connected to the API and database. Some dashboard pages are still summaries or placeholders; this README distinguishes shipped behavior from planned work.
 
-# 35. Grades
+### Implemented
 
-Possible structure:
+- Four account roles: `ADMIN`, `TEACHER`, `STUDENT`, and `PARENT`.
+- Registration and login using bcrypt password hashing and signed JWT bearer tokens.
+- Session persistence in browser `localStorage`, session restoration through `/api/auth/me`, protected routes, and role-based frontend navigation.
+- Admin class management: create, list, edit, delete, and manage enrolled students.
+- Admin teaching assignments: assign teachers, classes, and subjects; view and remove assignments.
+- Teacher dashboard and assigned teaching list; class workspace with enrolled students, assignment creation, and attendance entry.
+- Student dashboard and assignment list; API endpoints include assignment submission.
+- PostgreSQL schema and Drizzle migration history for users, classes, enrollments, subjects, teacher assignments, assignments, attendance, and submissions.
+- Health endpoint at `GET /api/health`.
 
-```text
-grades
-------
-id
-student_id
-assignment_id
-teacher_id
-marks
-max_marks
-feedback
-created_at
-updated_at
-```
-
-This allows students and parents to see:
+### Still in progress
 
-```text
-Assignment
-    ↓
-Marks
-    ↓
-Teacher feedback
-```
+- Parent dashboard data and parent-to-student linking.
+- Admin user management and a complete subject management screen.
+- Student class, attendance, marks, and grade views; teacher student, marks, and assignment navigation pages.
+- Assignment detail/submission experience in the frontend (the backend supports creating submissions).
+- Grading, feedback, reporting, announcements, messaging, and notifications.
+- Production deployment configuration and automated tests.
 
----
+Routes that currently render the shared “coming soon” feature page are placeholders, not completed workflows. The parent dashboard is also a presentational starting point rather than a data-backed view.
 
-# 36. Announcements
-
-```text
-announcements
--------------
-id
-title
-content
-created_by
-target_role
-class_id
-created_at
-```
+## Architecture
 
-Possible targets:
+### Runtime and responsibilities
 
 ```text
-ALL
-TEACHER
-STUDENT
-PARENT
-CLASS
+Browser
+  React pages and components
+    ├─ React Router selects public, authenticated, and role-specific screens
+    ├─ AuthProvider owns the current user, token, loading state, login, and logout
+    └─ apiFetch adds JSON headers and the bearer token
+                  │ HTTP / JSON
+                  ▼
+Express API (backend/src/server.ts)
+  ├─ CORS, JSON parsing, health endpoint, route mounting
+  ├─ route modules parse inputs and apply authentication/role checks
+  ├─ services apply school workflow rules and query/update data
+  └─ Drizzle ORM maps TypeScript queries to PostgreSQL
+                  │
+                  ▼
+PostgreSQL (schema + checked-in SQL migrations)
 ```
-
----
-
-# 37. Messaging
 
-A future messaging system could use:
+Responsibilities should remain separated as features grow:
 
-```text
-conversations
-messages
-conversation_participants
-```
+- **Frontend pages/components** render role workflows, collect input, and show loading, empty, success, and error states. They should not decide whether a user is authorized to read or change a record.
+- **Auth context and route guards** restore the browser session and route users to the right area. These guards improve navigation but cannot replace API authorization.
+- **Express routes** define the HTTP contract, parse/validate request data, and compose middleware. Keep role checks close to route definitions.
+- **Services** implement reusable business rules and data operations, such as verifying that a teacher is assigned to a class before publishing work.
+- **Database schema and migrations** own persistent relationships and constraints. Every schema change should have a reviewed migration committed alongside the application change.
 
-Possible use cases:
+### Request lifecycle
 
-```text
-Teacher ↔ Student
-Teacher ↔ Parent
-Admin ↔ Teacher
-Admin ↔ Parent
-```
+1. A page calls `apiFetch` with an endpoint and request options.
+2. The client prefixes the configured API URL, reads `accessToken` from `localStorage`, and sends `Authorization: Bearer <token>` when present.
+3. Express routes the request under `/api`. Public auth endpoints do not require a token; protected routes run `authenticate` and, where needed, `authorizeRoles`.
+4. The route validates parameters and body data (Zod is used by many endpoints), checks resource ownership/assignment, and calls a service.
+5. The service reads or writes through Drizzle. PostgreSQL constraints enforce unique keys and foreign-key relationships.
+6. The API returns JSON; `apiFetch` converts non-success responses into errors for the page to display.
 
----
+### Current feature boundaries
 
-# 38. API Structure
+- `backend/src/server.ts` mounts `/api/auth`, `/api/classes`, `/api/subjects`, `/api/teacher`, `/api/student`, and `/api/class-enrollments`, and exposes `/api/health`.
+- `backend/src/modules/auth/` handles register/login/current-user resolution. `backend/src/middleware/` validates JWTs and role access.
+- `backend/src/modules/classes/` owns class and enrollment administration; `subjects/` owns subjects and teacher-class-subject assignments.
+- `backend/src/modules/academic/` owns teacher/student dashboards, teacher class workspace, assignments, and attendance. Student submission operations live in `backend/src/services/` and `backend/src/routes/`.
+- `frontend/src/app/App.tsx` defines public and role-gated routes. `frontend/src/auth/` manages session restoration and route guards; `frontend/src/services/api/client.ts` centralizes HTTP calls.
+- `frontend/src/pages/` contains role-specific screens. Some routes intentionally render a shared placeholder while their workflows are planned.
 
-A future REST API could look like:
+### Main data relationships
 
 ```text
-/api/auth
-/api/users
-/api/teachers
-/api/students
-/api/parents
-/api/classes
-/api/subjects
-/api/attendance
-/api/assignments
-/api/submissions
-/api/grades
-/api/announcements
-/api/messages
+users ──< class_enrollments >── classes
+users (teacher) ──< teacher_subject_assignments >── classes
+                                  └───────────────> subjects
+classes ──< assignments ──< submissions >── users (student)
+classes ──< attendance_records >── users (student)
 ```
-
----
-
-# 39. Example Protected APIs
 
-Admin-only:
-
-```text
-GET    /api/users
-POST   /api/users
-PATCH  /api/users/:id
-DELETE /api/users/:id
-```
+The role is stored on `users`; enrollments link student accounts to classes; teacher assignments link teachers, classes, and subjects; assignments belong to a class and teacher; submissions and attendance records belong to a student and class/assignment. Parent-child links do not exist yet and must be modeled before parent-specific student data is exposed.
 
-Teacher/admin:
+The frontend lives in `frontend/`, the API in `backend/`, and the schema/migrations in `backend/src/db/schema.ts` and `backend/drizzle/`. There is no root package manifest; install and run each app from its own directory.
+## Requirements
 
-```text
-GET  /api/classes
-GET  /api/classes/:id/students
-POST /api/attendance
-POST /api/assignments
-POST /api/grades
-```
+- Node.js and npm
+- PostgreSQL database
+- A database URL and JWT secret for the backend
 
-Student:
+## Setup
 
-```text
-GET  /api/student/classes
-GET  /api/student/assignments
-POST /api/student/assignments/:id/submit
-GET  /api/student/grades
-GET  /api/student/attendance
-```
+### 1. Configure the backend
 
-Parent:
+Create `backend/.env` (do not commit secrets):
 
-```text
-GET /api/parent/children
-GET /api/parent/children/:id/attendance
-GET /api/parent/children/:id/grades
-GET /api/parent/children/:id/assignments
+```dotenv
+PORT=3000
+DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/teacher_student_app
+JWT_SECRET=replace-with-a-long-random-secret
+FRONTEND_URL=http://localhost:5173
 ```
-
-Every protected endpoint should perform backend authentication and appropriate authorization.
 
----
+Create the database named in `DATABASE_URL` before migrating. The backend reads environment variables through `dotenv/config`.
 
-# 40. API Client
+Install dependencies and apply the checked-in Drizzle migrations:
 
-Instead of repeating `fetch()` everywhere, create a central API client.
-
-Possible structure:
-
-```text
-src/services/
-├── api.ts
-├── authApi.ts
-├── usersApi.ts
-├── classesApi.ts
-├── attendanceApi.ts
-├── assignmentsApi.ts
-└── gradesApi.ts
+```powershell
+cd backend
+npm install
+npm run db:migrate
 ```
 
-Example:
-
-```ts
-const API_URL = "http://localhost:3000";
-
-export async function apiFetch(
-  path: string,
-  options: RequestInit = {}
-) {
-  const token = localStorage.getItem("accessToken");
-
-  const response = await fetch(
-    `${API_URL}${path}`,
-    {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...(token
-          ? {
-              Authorization: `Bearer ${token}`,
-            }
-          : {}),
-        ...options.headers,
-      },
-    }
-  );
-
-  return response;
-}
-```
-
-This gives the frontend one place to handle authentication headers.
+`npm run db:generate` creates a migration from schema changes. Review generated SQL before committing it. `npm run db:push` pushes schema changes directly and is intended for local development, not as the normal production migration process.
 
----
+### 2. Configure the frontend
 
-# 41. Environment Variables
+Optionally create `frontend/.env` to point the UI to a non-default API host:
 
-Frontend:
-
-```text
+```dotenv
 VITE_API_URL=http://localhost:3000
 ```
 
-Then:
+`VITE_API_URL` may be the API origin (`http://localhost:3000`) or include `/api`; the client normalizes either form. If omitted, the frontend uses `http://localhost:3000/api`.
 
-```ts
-const API_URL = import.meta.env.VITE_API_URL;
+Install dependencies and start the frontend in another terminal:
+
+```powershell
+cd frontend
+npm install
+npm run dev
 ```
 
-Backend:
+Start the API in a separate terminal:
+
+```powershell
+cd backend
+npm run dev
+```
+
+Open the Vite URL printed in the frontend terminal (normally `http://localhost:5173`). The API health check is `http://localhost:3000/api/health`.
+
+### Build commands
+
+Run from the relevant package directory:
+
+```powershell
+# frontend
+npm run build
+npm run lint
+
+# backend
+npm run build
+```
+
+The frontend also has `npm run preview` to serve a production build locally. There is no automated test script currently configured.
+
+## First use
+
+1. Start PostgreSQL, apply backend migrations, and start both frontend and backend.
+2. Register at `/register` using a valid email, a password of at least eight characters, and a role.
+3. Sign in at `/login`. The app stores the returned access token in `localStorage`, then uses it for API requests and restores the user on refresh.
+4. The root route (`/`) redirects authenticated users to the dashboard for their role. `/unauthorized` is shown when a signed-in user visits a route for another role.
+5. For a useful admin-to-teacher workflow, register accounts for the roles you need; create subjects and a class, assign a teacher to the class/subject, enroll student accounts, then sign in as the assigned teacher to publish work or record attendance.
+
+**Access-control note:** registration currently accepts any of the four roles, including `ADMIN`. This is convenient for development but is not safe for an open production deployment. Restrict admin creation before exposing public registration. Authentication is enforced by API middleware; frontend route guards are for navigation and are not a security boundary.
+
+## API overview
+
+All routes are mounted under `/api`. Protected endpoints expect `Authorization: Bearer <token>`. The API validates many request bodies with Zod and responds with JSON.
+
+| Method | Path | Access | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/health` | Public | API status |
+| `POST` | `/auth/register` | Public | Create an account (`email`, `password`, `role`) |
+| `POST` | `/auth/login` | Public | Authenticate and receive token/user |
+| `GET` | `/auth/me` | Authenticated | Resolve current user |
+| `GET`, `POST` | `/classes` | Admin | List/create classes |
+| `GET` | `/classes/people` | Admin | List school accounts for class setup |
+| `PUT`, `DELETE` | `/classes/:id` | Admin | Update/delete a class |
+| `GET`, `POST` | `/classes/:id/enrollments` | Admin | List/add enrolled students |
+| `DELETE` | `/classes/:id/enrollments/:studentId` | Admin | Remove an enrolled student |
+| `GET` | `/subjects` | Admin, teacher | List subjects |
+| `POST`, `PUT`, `DELETE` | `/subjects` and `/subjects/:id` | Admin | Manage subjects |
+| `GET`, `POST` | `/subjects/assignments` | Admin | List/create teacher-class-subject assignments |
+| `DELETE` | `/subjects/assignments/:id` | Admin | Remove a teaching assignment |
+| `GET` | `/subjects/my-assignments` | Teacher | List the signed-in teacher's assignments |
+| `GET` | `/teacher/dashboard` | Teacher | Teacher overview and classes |
+| `GET` | `/teacher/classes/:classId` | Assigned teacher | Class details and attendance for a date |
+| `POST` | `/teacher/assignments` | Assigned teacher | Publish an assignment to a class |
+| `PUT` | `/teacher/classes/:classId/attendance` | Assigned teacher | Record attendance entries |
+| `GET` | `/student/dashboard` | Student | Student overview |
+| `GET` | `/student/assignments` | Student | List enrolled-class assignments with submission status |
+| `GET` | `/student/assignments/:assignmentId` | Enrolled student | Load assignment details and the signed-in student submission |
+| `POST` | `/student/assignments/:assignmentId/submissions` | Enrolled student | Submit or resubmit text content (maximum 10,000 characters) |
+
+The student assignment detail screen shows the due date, current submission state, and any marks/feedback. Students may submit late work and edit/resubmit until the work is graded; graded submissions are locked. Resubmission updates the existing row and resets its grading fields. Text submissions are limited to 10,000 characters. The backend has no logout endpoint; logout is currently client-side token removal. Submission uploads and the teacher grading workflow are not implemented.
+
+## Data model
+
+- `users`: email, password hash, and role.
+- `classes`: grade, section, optional teacher link, room, and capacity.
+- `class_enrollments`: many-to-many class/student enrollment.
+- `subjects`: named subjects with unique codes.
+- `teacher_subject_assignments`: teacher/class/subject links.
+- `assignments`: class, teacher, title, description, and due date.
+- `attendance_records`: per-student, per-class, per-date status (`PRESENT`, `ABSENT`, `LATE`).
+- `submissions`: assignment/student content, status, marks, and feedback fields.
+
+## Development plan
+
+Implement each workflow vertically: schema/migration, API contract and validation, service rules, role authorization, UI, then manual/automated verification. This keeps screens from appearing complete while the corresponding server rules or data model are missing.
+
+### Phase 1 — Finish existing assignment workflow (complete)
+
+- Consolidated the student assignment APIs under one router; assignment IDs are validated as UUIDs and text submissions are capped at 10,000 characters.
+- List/detail reads return assignments only for classes the signed-in student is enrolled in. Detail includes that student's own submission, status, marks, and feedback.
+- Students can submit and resubmit text, including after the due date. Resubmission updates the existing submission and clears prior grading fields; a graded submission is locked.
+- The list and detail pages show loading, empty, overdue, submitted/graded, retry, success, and API error states.
+
+### Phase 2 — Harden identity and administration
+
+1. Stop accepting `ADMIN` from public registration. Add a deliberate bootstrap/admin-provisioning path, and make account creation an admin workflow or invitation flow.
+2. Add user-management API operations with password hashing, role validation, duplicate-email handling, and safe response projections that never return `passwordHash`.
+3. Add admin user and subject screens using the existing classes/subjects API patterns.
+4. Enforce class capacity and role constraints (only student accounts can enroll; only teacher accounts can be assigned) in services and database constraints where possible.
+5. Add pagination/search after basic list/create/update/delete behavior is stable.
+
+### Phase 3 — Complete attendance and student views
+
+1. Add student endpoints for their enrolled classes and attendance history/summary. Derive student identity from the authenticated token, never from a client-supplied student ID.
+2. Add the corresponding student classes and attendance pages with clear date/status summaries.
+3. Ensure attendance writes verify that each submitted student is enrolled in the target class and that the teacher is assigned to that class.
+4. Add request-level transactions or upsert behavior so saving an attendance roster cannot leave a partially updated date.
+
+### Phase 4 — Parent data model and views
+
+1. Add a parent-student relationship table with uniqueness and foreign keys, plus reviewed migration and admin linking workflow.
+2. Define whether one student can have multiple linked parents and how a parent account is verified before a link is approved.
+3. Add parent APIs that derive the parent ID from the authenticated user and restrict every result to linked students.
+4. Implement parent dashboard, child selector, attendance, assignment, and later grade summaries only after those ownership checks are in place.
+
+### Phase 5 — Grading and assessment
+
+1. Add teacher endpoints to list submissions for assigned classes and assignments.
+2. Add validation for grade range, feedback length, submission state transitions, and teacher ownership of the assignment.
+3. Implement the teacher review screen and persist marks/feedback/status in `submissions`.
+4. Add student and linked-parent grade views, with access scoped to the signed-in user or verified relationship.
+5. Decide and document late-work, resubmission, and grade-change policies before baking them into UI behavior.
+
+### Phase 6 — Communication and reporting
+
+1. Model announcements with author, audience/class targeting, publication time, and visibility rules.
+2. Add notifications only after the source events and read/unread behavior are defined.
+3. Build attendance and grade reports from server-side queries with role-scoped filters; add exports after report totals are verified.
+4. Consider audit history for grade, attendance, enrollment, and account changes.
+
+### Phase 7 — Release readiness
+
+1. Add API and UI tests for login, role denial, class ownership, enrollment, attendance, assignments, and parent scoping.
+2. Add consistent error handling, request logging, database connection shutdown, and deployment environment documentation.
+3. Review CORS, secrets, rate limiting, registration policy, and token/session storage for the target deployment.
+4. Run migration and build checks in CI, and document backup/restore and rollback expectations.
+
+### Definition of done for each workflow
+
+- The migration is repeatable and constraints reflect the business rules.
+- Requests validate input and return documented status codes and response shapes.
+- The API checks role **and** record ownership/assignment; frontend route guards alone are insufficient.
+- The UI handles loading, empty, success, validation, and server-error cases.
+- The workflow has focused tests and a short manual verification path in the README or project docs.
+## Security and operational notes
+
+- Passwords are hashed with bcrypt; raw passwords are not stored.
+- JWTs are signed with `JWT_SECRET`; set a strong secret outside source control.
+- The browser currently stores access tokens in `localStorage`. Consider secure HttpOnly cookie-based sessions and refresh/session management for production.
+- Keep CORS `FRONTEND_URL` aligned with the deployed frontend origin.
+- The API and database must be reachable from the frontend user's environment; `VITE_API_URL` is compiled into the frontend build.
+- Parent access and student-specific records require server-side relationship/ownership checks as those features are added.
+
+## Repository map
 
 ```text
-PORT=3000
-DATABASE_URL=postgresql://...
-JWT_SECRET=...
+backend/
+  src/modules/       Auth, classes, subjects, academic routes/services
+  src/middleware/    Authentication and role authorization
+  src/db/            Drizzle schema and PostgreSQL connection
+  drizzle/           SQL migrations and migration metadata
+frontend/
+  src/auth/          Auth context and route guards
+  src/app/           Router and app providers
+  src/pages/         Admin, teacher, student, and parent screens
+  src/services/api/  Shared API fetch client
 ```
-
-Do not commit `.env` files containing real credentials.
-
----
-
-# 42. Error Handling
-
-Backend should use consistent responses.
-
-Example:
-
-```json
-{
-  "message": "Invalid email or password"
-}
-```
-
-Validation errors can return structured information.
-
-Frontend should display useful messages without exposing internal errors.
-
-Examples:
-
-```text
-Invalid email or password
-Authentication required
-You do not have permission to access this resource
-Something went wrong. Please try again.
-```
-
----
-
-# 43. Loading States
-
-The frontend should distinguish between:
-
-```text
-Loading authentication
-Loading dashboard
-Loading table
-Submitting form
-Saving attendance
-Uploading assignment
-```
-
-Avoid showing stale data while loading a newly selected resource.
-
-A proper loading indicator should be displayed where appropriate.
-
----
-
-# 44. Authentication Testing Checklist
-
-## Login
-
-- [ ] Correct email/password logs in
-- [ ] Incorrect password returns error
-- [ ] Unknown email returns error
-- [ ] JWT is returned
-- [ ] User information is returned
-
-## `/me`
-
-- [ ] Valid JWT works
-- [ ] Missing JWT returns 401
-- [ ] Invalid JWT returns 401
-- [ ] Expired JWT returns 401
-
-## React
-
-- [ ] Login page works
-- [ ] Token is persisted
-- [ ] Browser refresh restores session
-- [ ] Logout clears authentication
-- [ ] Protected pages redirect logged-out users
-- [ ] Role routes reject incorrect roles
-
-## Backend authorization
-
-- [ ] Admin can access admin APIs
-- [ ] Teacher can access teacher APIs
-- [ ] Student cannot access teacher-only APIs
-- [ ] Parent cannot access admin-only APIs
-- [ ] Unauthorized role returns 403
-
----
-
-# 45. Current Authentication Milestone
-
-The authentication flow has now reached this point:
-
-```text
-                    REGISTER
-                       │
-                       ▼
-                  PostgreSQL
-                       │
-                       ▼
-                     LOGIN
-                       │
-                       ▼
-                  bcrypt check
-                       │
-                       ▼
-                     JWT
-                       │
-                       ▼
-                React AuthContext
-                       │
-             ┌─────────┴─────────┐
-             ▼                   ▼
-        localStorage          user state
-             │                   │
-             └─────────┬─────────┘
-                       ▼
-                   /api/auth/me
-                       │
-                       ▼
-                Session restored
-```
-
-The next implementation milestone is role-based application navigation and the actual school-management APIs.
-
----
-
-# 46. Recommended Development Order
-
-Build the application incrementally.
-
-## Phase 1 — Authentication
-
-- [x] PostgreSQL connection
-- [x] User schema
-- [x] Register API
-- [x] Login API
-- [x] bcrypt password hashing
-- [x] JWT creation
-- [x] Authentication middleware
-- [x] Role middleware
-- [x] React Login
-- [ ] `/me`
-- [ ] AuthContext
-- [ ] ProtectedRoute
-- [ ] RoleRoute
-- [ ] Logout
-- [ ] Unauthorized page
-
-## Phase 2 — Application Shell
-
-- [ ] Dashboard layout
-- [ ] Header
-- [ ] Sidebar
-- [ ] Role-specific navigation
-- [ ] Loading states
-- [ ] Error handling
-- [ ] API client
-
-## Phase 3 — User Management
-
-- [ ] Admin user list
-- [ ] Create user
-- [ ] Edit user
-- [ ] Disable/delete user
-- [ ] Teacher profiles
-- [ ] Student profiles
-- [ ] Parent profiles
-
-## Phase 4 — Academic Structure
-
-- [ ] Classes
-- [ ] Subjects
-- [ ] Student enrollment
-- [ ] Teacher assignments
-- [ ] Academic years
-
-## Phase 5 — Attendance
-
-- [ ] Teacher attendance UI
-- [ ] Attendance API
-- [ ] Attendance history
-- [ ] Student attendance view
-- [ ] Parent attendance view
-- [ ] Attendance summaries
-
-## Phase 6 — Assignments
-
-- [ ] Create assignment
-- [ ] Assignment list
-- [ ] Student submission
-- [ ] Submission tracking
-- [ ] Teacher grading
-- [ ] Student feedback
-
-## Phase 7 — Grades
-
-- [ ] Grade entry
-- [ ] Grade editing
-- [ ] Student grade view
-- [ ] Parent grade view
-- [ ] Performance summaries
-
-## Phase 8 — Communication
-
-- [ ] Announcements
-- [ ] Role/class targeting
-- [ ] Teacher-parent messaging
-- [ ] Notifications
-
-## Phase 9 — Reports
-
-- [ ] Attendance reports
-- [ ] Grade reports
-- [ ] Student performance
-- [ ] Teacher/class reports
-- [ ] Export functionality
-
----
-
-# 47. Security Principles
-
-The application should follow these principles:
-
-1. Never store plaintext passwords.
-2. Hash passwords with bcrypt.
-3. Never trust a role supplied by the React frontend.
-4. Always determine authorization on the backend.
-5. Validate API input with Zod.
-6. Use parameterized/ORM database queries.
-7. Keep secrets in environment variables.
-8. Never expose `passwordHash` through API responses.
-9. Validate ownership as well as role.
-
-For example, a student being a `STUDENT` is not enough to access any student's grades.
-
-The backend should verify:
-
-```text
-Is authenticated?
-        ↓
-Is STUDENT?
-        ↓
-Does this grade belong to this student?
-        ↓
-Allow
-```
-
-Similarly, a parent should only be able to access children actually linked to that parent.
-
----
-
-# 48. Important Authorization Concept
-
-Role-based authorization alone is not enough.
-
-There are two levels:
-
-### Role authorization
-
-```text
-Is this a TEACHER?
-```
-
-### Resource authorization
-
-```text
-Is this teacher assigned to this class?
-```
-
-For example:
-
-```text
-Teacher A
-   ↓
-GET /api/classes/123/students
-```
-
-The backend should verify that Teacher A is actually assigned to class `123`.
-
-Likewise:
-
-```text
-Parent A
-   ↓
-GET /api/students/999/grades
-```
-
-should only succeed if student `999` is actually linked to Parent A.
-
-This prevents horizontal privilege escalation.
-
----
-
-# 49. Suggested UI Experience
-
-The application can eventually have a clean dashboard experience:
-
-```text
-┌─────────────────────────────────────────────┐
-│ Logo                         User ▼         │
-├──────────────┬──────────────────────────────┤
-│              │                              │
-│ Dashboard    │  Welcome back!              │
-│              │                              │
-│ Classes      │  ┌──────┐ ┌──────┐          │
-│ Students     │  │ 120  │ │  8   │          │
-│ Attendance   │  │Students│Classes│          │
-│ Assignments  │  └──────┘ └──────┘          │
-│ Grades       │                              │
-│ Reports      │  Recent activity             │
-│              │                              │
-│ Settings     │                              │
-│ Logout       │                              │
-└──────────────┴──────────────────────────────┘
-```
-
-Each role gets its own relevant navigation and dashboard data.
-
----
-
-# 50. Long-Term Feature Ideas
-
-Possible future features:
-
-- Calendar
-- Timetable
-- Exam schedules
-- Online exams
-- Report cards
-- Certificates
-- Fee management
-- School announcements
-- Notifications
-- Email notifications
-- File/document management
-- Teacher-parent messaging
-- Student progress charts
-- Class performance analytics
-- Assignment attachments
-- Profile photos
-- Academic year management
-- Multiple schools/tenants
-- Audit logs
-- Admin activity tracking
-- Search and filtering
-- Pagination
-- CSV/Excel exports
-- PDF reports
-
----
-
-# 51. Recommended Immediate Next Steps
-
-The immediate implementation sequence should be:
-
-```text
-1. Implement GET /api/auth/me
-           ↓
-2. Implement React AuthContext
-           ↓
-3. Persist JWT
-           ↓
-4. Restore session after refresh
-           ↓
-5. Implement ProtectedRoute
-           ↓
-6. Implement RoleRoute
-           ↓
-7. Implement Unauthorized page
-           ↓
-8. Create Admin/Teacher/Student/Parent dashboards
-           ↓
-9. Create shared DashboardLayout
-           ↓
-10. Create centralized API client
-           ↓
-11. Build Admin user management
-           ↓
-12. Build classes/subjects
-           ↓
-13. Build attendance
-           ↓
-14. Build assignments
-           ↓
-15. Build grades
-           ↓
-16. Build parent/student views
-           ↓
-17. Build announcements/messaging
-```
-
-This order keeps authentication and authorization solid before adding the actual school-management functionality.
-
----
-
-# 52. Development Philosophy
-
-Keep responsibilities separated.
-
-### React
-
-Responsible for:
-
-- UI
-- Navigation
-- Forms
-- Loading states
-- Displaying data
-- Client-side route protection
-
-### Express
-
-Responsible for:
-
-- API endpoints
-- Authentication
-- Authorization
-- Validation
-- Business logic orchestration
-
-### Services
-
-Responsible for:
-
-- Application/business logic
-- Database operations
-- Reusable operations
-
-### PostgreSQL
-
-Responsible for:
-
-- Persistent data
-- Relationships
-- Constraints
-- Referential integrity
-
-The frontend should never be trusted to enforce security rules by itself.
-
----
-
-# 53. Final Target Architecture
-
-```text
-                         ┌──────────────────┐
-                         │   React + Vite   │
-                         └────────┬─────────┘
-                                  │
-                     ┌────────────▼────────────┐
-                     │     AuthContext         │
-                     │ JWT + Current User      │
-                     └────────────┬────────────┘
-                                  │
-                 ┌────────────────▼────────────────┐
-                 │       React Router              │
-                 │ ProtectedRoute + RoleRoute      │
-                 └────────────────┬────────────────┘
-                                  │
-          ┌───────────────────────┼────────────────────────┐
-          │                       │                        │
-          ▼                       ▼                        ▼
-       ADMIN                   TEACHER                  STUDENT
-     Dashboard                Dashboard                Dashboard
-          │                       │                        │
-          └───────────────────────┼────────────────────────┘
-                                  │
-                                  ▼
-                         REST API / Express
-                                  │
-                         ┌────────▼────────┐
-                         │ Authentication  │
-                         │ Authorization   │
-                         │ Validation      │
-                         └────────┬────────┘
-                                  │
-                         ┌────────▼────────┐
-                         │   Controllers   │
-                         └────────┬────────┘
-                                  │
-                         ┌────────▼────────┐
-                         │    Services     │
-                         └────────┬────────┘
-                                  │
-                         ┌────────▼────────┐
-                         │ Drizzle ORM     │
-                         └────────┬────────┘
-                                  │
-                         ┌────────▼────────┐
-                         │  PostgreSQL     │
-                         └─────────────────┘
-```
-
-The goal is to build the system incrementally, keeping authentication, authorization, database relationships, and role-specific functionality clearly separated so that the application remains maintainable as features grow.
