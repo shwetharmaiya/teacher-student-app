@@ -8,6 +8,8 @@ import {
     getTeacherClassDetails,
     getStudentDashboard,
     getTeacherDashboard,
+    getStudentClasses,
+    getStudentAttendance,
     isTeacherClass,
     recordAttendance,
 } from "./academic.service.js";
@@ -27,7 +29,10 @@ const attendanceSchema = z.object({
     entries: z.array(z.object({
         studentId: z.string().uuid(),
         status: z.enum(["PRESENT", "ABSENT", "LATE"]),
-    })).min(1),
+    })).min(1).max(200).refine(
+        (entries) => new Set(entries.map((entry) => entry.studentId)).size === entries.length,
+        "Each student can appear only once in an attendance roster",
+    ),
 });
 
 teacherRouter.use(authenticate, authorizeRoles("TEACHER"));
@@ -69,15 +74,31 @@ teacherRouter.put("/classes/:classId/attendance", async (req: AuthenticatedReque
             return res.status(403).json({ message: "You can only record attendance for your assigned classes" });
         }
         const attendance = attendanceSchema.parse(req.body);
-        return res.json({ records: await recordAttendance({ classId, ...attendance }) });
+        return res.json({ records: await recordAttendance({ classId, teacherId: req.user!.userId, ...attendance }) });
     } catch (error) {
-        return res.status(400).json({ message: error instanceof Error ? error.message : "Could not record attendance" });
+        const message = error instanceof Error ? error.message : "Could not record attendance";
+        const status = message.includes("assigned classes") ? 403
+            : message === "Class not found" ? 404
+            : message.includes("enrolled") || message.includes("once") ? 409
+            : 400;
+        return res.status(status).json({ message });
     }
 });
 
 studentRouter.use(authenticate, authorizeRoles("STUDENT"));
 studentRouter.get("/dashboard", async (req: AuthenticatedRequest, res) => {
     res.json(await getStudentDashboard(req.user!.userId));
+});
+studentRouter.get("/classes", async (req: AuthenticatedRequest, res) => {
+    res.json({ classes: await getStudentClasses(req.user!.userId) });
+});
+studentRouter.get("/attendance", async (req: AuthenticatedRequest, res) => {
+    try {
+        const classId = req.query.classId === undefined ? undefined : z.string().uuid().parse(req.query.classId);
+        return res.json(await getStudentAttendance(req.user!.userId, classId));
+    } catch (error) {
+        return res.status(400).json({ message: error instanceof Error ? error.message : "Could not load attendance" });
+    }
 });
 
 export { studentRouter, teacherRouter };

@@ -130,7 +130,7 @@ export default function TeacherClassWorkspacePage() {
                 setAssignment(selectedAssignment);
 
                 const detailsResponse = await apiFetch<ClassDetailsResponse>(
-                    `/teacher/classes/${classId}?attendanceDate=${attendanceDate}`,
+                    `/teacher/classes/${classId}?date=${attendanceDate}`,
                 );
 
                 setClassDetails(detailsResponse);

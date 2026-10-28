@@ -1672,6 +1672,94 @@ a { color: inherit; }
     overflow: hidden;
 }
 
+.student-records-page {
+    display: grid;
+    gap: 14px;
+}
+
+.student-records-page > h2,
+.student-records-page > .page-intro {
+    margin: 0;
+}
+
+.student-class-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+}
+
+.student-class-card {
+    padding: 22px;
+}
+
+.student-class-card h3 {
+    margin: 4px 0 20px;
+    font-size: 22px;
+}
+
+.student-class-card dl {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+}
+
+.student-class-card dl div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.student-class-card dt {
+    color: #64748b;
+}
+
+.student-class-card dd {
+    margin: 0;
+    font-weight: 600;
+    text-align: right;
+}
+
+.student-attendance-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.student-attendance-toolbar label {
+    font-weight: 600;
+}
+
+.student-attendance-toolbar select {
+    min-width: 210px;
+    padding: 9px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: #fff;
+    font: inherit;
+}
+
+.student-attendance-stats {
+    grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+}
+
+.student-attendance-table-wrap {
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #fff;
+}
+
+.student-attendance-status {
+    display: inline-flex;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.student-attendance-status.present { background: #dcfce7; color: #166534; }
+.student-attendance-status.late { background: #fef3c7; color: #92400e; }
+.student-attendance-status.absent { background: #fee2e2; color: #991b1b; }
+
 @media (max-width: 650px) {
     .admin-pagination {
         align-items: stretch;
@@ -1680,5 +1768,10 @@ a { color: inherit; }
 
     .admin-pagination > div {
         justify-content: space-between;
+    }
+
+    .student-attendance-toolbar {
+        align-items: stretch;
+        flex-direction: column;
     }
 }

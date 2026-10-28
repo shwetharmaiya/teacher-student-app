@@ -98,6 +98,55 @@ export async function getStudentDashboard(studentId: string) {
     };
 }
 
+export async function getStudentClasses(studentId: string) {
+    return db
+        .select({
+            id: classes.id,
+            grade: classes.grade,
+            section: classes.section,
+            teacherName: classes.teacherName,
+            room: classes.room,
+        })
+        .from(classEnrollments)
+        .innerJoin(classes, eq(classEnrollments.classId, classes.id))
+        .where(eq(classEnrollments.studentId, studentId))
+        .orderBy(asc(classes.grade), asc(classes.section));
+}
+
+export async function getStudentAttendance(studentId: string, classId?: string) {
+    const conditions = [eq(attendanceRecords.studentId, studentId)];
+    if (classId) conditions.push(eq(attendanceRecords.classId, classId));
+    const records = await db
+        .select({
+            id: attendanceRecords.id,
+            classId: attendanceRecords.classId,
+            grade: classes.grade,
+            section: classes.section,
+            attendanceDate: attendanceRecords.attendanceDate,
+            status: attendanceRecords.status,
+        })
+        .from(attendanceRecords)
+        .innerJoin(classes, eq(attendanceRecords.classId, classes.id))
+        .where(and(...conditions))
+        .orderBy(desc(attendanceRecords.attendanceDate), asc(classes.grade), asc(classes.section));
+    const summary = records.reduce((total, record) => {
+        total.recorded += 1;
+        total[record.status.toLowerCase() as "present" | "absent" | "late"] += 1;
+        if (record.status === "PRESENT" || record.status === "LATE") total.attended += 1;
+        return total;
+    }, { recorded: 0, present: 0, absent: 0, late: 0, attended: 0 });
+    return {
+        records,
+        summary: {
+            recorded: summary.recorded,
+            present: summary.present,
+            absent: summary.absent,
+            late: summary.late,
+            percentage: summary.recorded === 0 ? null : Math.round(summary.attended / summary.recorded * 100),
+        },
+    };
+}
+
 export async function isTeacherClass(teacherId: string, classId: string) {
     const [subjectAssignment] = await db
         .select({ id: teacherSubjectAssignments.id })
@@ -226,6 +275,7 @@ export async function createAssignment(input: {
 }
 
 export async function recordAttendance(input: {
+    teacherId: string;
     classId: string;
     attendanceDate: string;
     entries: { studentId: string; status: "PRESENT" | "ABSENT" | "LATE" }[];
@@ -234,30 +284,41 @@ export async function recordAttendance(input: {
         return [];
     }
 
-    const enrolledStudents = await db
-        .select({ studentId: classEnrollments.studentId })
-        .from(classEnrollments)
-        .where(eq(classEnrollments.classId, input.classId));
-    const enrolledStudentIds = new Set(enrolledStudents.map((enrollment) => enrollment.studentId));
-    if (input.entries.some((entry) => !enrolledStudentIds.has(entry.studentId))) {
-        throw new Error("Attendance can only be recorded for students enrolled in this class");
-    }
+    return db.transaction(async (tx) => {
+        const [classRecord] = await tx.select({ id: classes.id, teacherId: classes.teacherId })
+            .from(classes).where(eq(classes.id, input.classId)).for("update").limit(1);
+        if (!classRecord) throw new Error("Class not found");
 
-    const records = input.entries.map((entry) => ({
-        classId: input.classId,
-        studentId: entry.studentId,
-        attendanceDate: input.attendanceDate,
-        status: entry.status,
-    }));
+        const [subjectAssignment] = await tx.select({ id: teacherSubjectAssignments.id })
+            .from(teacherSubjectAssignments)
+            .where(and(eq(teacherSubjectAssignments.teacherId, input.teacherId), eq(teacherSubjectAssignments.classId, input.classId)))
+            .limit(1);
+        if (classRecord.teacherId !== input.teacherId && !subjectAssignment) {
+            throw new Error("You can only record attendance for your assigned classes");
+        }
 
-    return db.insert(attendanceRecords).values(records).onConflictDoUpdate({
-        target: [
-            attendanceRecords.classId,
-            attendanceRecords.studentId,
-            attendanceRecords.attendanceDate,
-        ],
-        set: { status: sql`excluded.status` },
-    }).returning();
+        const uniqueStudentIds = new Set(input.entries.map((entry) => entry.studentId));
+        if (uniqueStudentIds.size !== input.entries.length) throw new Error("Each student can appear only once in an attendance roster");
+        const enrolledStudents = await tx.select({ studentId: classEnrollments.studentId })
+            .from(classEnrollments).where(and(
+                eq(classEnrollments.classId, input.classId),
+                inArray(classEnrollments.studentId, [...uniqueStudentIds]),
+            ));
+        if (enrolledStudents.length !== uniqueStudentIds.size) {
+            throw new Error("Attendance can only be recorded for students enrolled in this class");
+        }
+
+        const records = input.entries.map((entry) => ({
+            classId: input.classId,
+            studentId: entry.studentId,
+            attendanceDate: input.attendanceDate,
+            status: entry.status,
+        }));
+        return tx.insert(attendanceRecords).values(records).onConflictDoUpdate({
+            target: [attendanceRecords.classId, attendanceRecords.studentId, attendanceRecords.attendanceDate],
+            set: { status: sql`excluded.status` },
+        }).returning();
+    });
 }
 
 

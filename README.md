@@ -212,6 +212,8 @@ All routes are mounted under `/api`. Protected endpoints expect `Authorization: 
 | `POST` | `/teacher/assignments` | Assigned teacher | Publish an assignment to a class |
 | `PUT` | `/teacher/classes/:classId/attendance` | Assigned teacher | Record attendance entries |
 | `GET` | `/student/dashboard` | Student | Student overview |
+| `GET` | `/student/classes` | Student | List only the signed-in student's enrolled classes |
+| `GET` | `/student/attendance?classId=` | Student | Attendance summary and dated records, optionally filtered to an enrolled class |
 | `GET` | `/student/assignments` | Student | List enrolled-class assignments with submission status |
 | `GET` | `/student/assignments/:assignmentId` | Enrolled student | Load assignment details and the signed-in student submission |
 | `POST` | `/student/assignments/:assignmentId/submissions` | Enrolled student | Submit or resubmit text content (maximum 10,000 characters) |
@@ -248,12 +250,12 @@ Implement each workflow vertically: schema/migration, API contract and validatio
 - Admin pages now provide account and subject CRUD. Subject code uniqueness errors are returned as `409`.
 - Enrollment checks run in a transaction that locks the class row, verifies the student role, detects duplicates, and enforces the seat limit. Class capacity cannot be lowered below current enrollment. Existing foreign keys and unique indexes enforce record links and duplicate enrollment; cross-table role rules are enforced in services. Class teachers and teacher-subject assignments must have the `TEACHER` role.
 - The account list supports email search, role filters, and server-side pagination (default 20 per page; maximum 100).
-### Phase 3 — Complete attendance and student views
+### Phase 3 — Complete attendance and student views (implemented)
 
-1. Add student endpoints for their enrolled classes and attendance history/summary. Derive student identity from the authenticated token, never from a client-supplied student ID.
-2. Add the corresponding student classes and attendance pages with clear date/status summaries.
-3. Ensure attendance writes verify that each submitted student is enrolled in the target class and that the teacher is assigned to that class.
-4. Add request-level transactions or upsert behavior so saving an attendance roster cannot leave a partially updated date.
+1. Added student class and attendance endpoints. They derive the student ID from the authenticated session; the API accepts no student ID from the browser. Attendance can be filtered by class ID, and the query remains scoped to that signed-in student.
+2. Replaced the student classes and attendance placeholders with working pages. The classes page shows enrolled class, teacher, and room; attendance shows a filterable dated record list plus present, late, absent, and attendance-rate summaries, with loading, empty, retry, and API-error states.
+3. Attendance writes verify teacher assignment and every submitted student’s enrollment inside the write service. The roster is checked for duplicate student IDs and bounded to the class capacity limit (200 entries).
+4. Roster upserts run in a database transaction while locking the class row. A request either updates/inserts all submitted records for that date or rolls back; repeated saves update the existing class/student/date record.
 
 ### Phase 4 — Parent data model and views
 

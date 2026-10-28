@@ -23,6 +23,8 @@ import TeacherTeachingPage from "../pages/teacher/TeacherTeachingPage";
 import TeacherClassWorkspacePage from "../pages/teacher/TeacherClassWorkspacePage";
 import StudentAssignmentsPage from "../pages/student/StudentAssignmentsPage";
 import StudentAssignmentDetailsPage from "../pages/student/StudentAssignmentDetailsPage";
+import StudentClassesPage from "../pages/student/StudentClassesPage";
+import StudentAttendancePage from "../pages/student/StudentAttendancePage";
 import "../index.css";
 
 export default function App() {
@@ -116,7 +118,7 @@ export default function App() {
                             <Route path="/student/assignments/:assignmentId" element={<StudentAssignmentDetailsPage />} />
                             <Route
                                 path="/student/classes"
-                                element={<RoleFeaturePage title="My classes" />}
+                                element={<StudentClassesPage />}
                             />
                             <Route
                                 path="/student/marks"
@@ -124,7 +126,7 @@ export default function App() {
                             />
                             <Route
                                 path="/student/attendance"
-                                element={<RoleFeaturePage title="Attendance" />}
+                                element={<StudentAttendancePage />}
                             />
                            
                         </Route>
