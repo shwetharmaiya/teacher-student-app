@@ -6,6 +6,8 @@ import RoleRoute from "../auth/RoleRoute";
 import Login from "../pages/Login/LoginPage";
 import Unauthorized from "./../pages/Unauthorized";
 import Register from "./../pages/auth/Register";
+import UsersPage from "../pages/admin/UsersPage";
+import SubjectsPage from "../pages/admin/SubjectsPage";
 
 import AdminDashboard from "../pages/admin/AdminDashboard";
 import ClassesPage from "../pages/admin/ClassesPage";
@@ -40,9 +42,7 @@ export default function App() {
                             <Route path="/admin" element={<AdminDashboard />} />
                             <Route
                                 path="/admin/users"
-                                element={
-                                    <RoleFeaturePage title="User management" />
-                                }
+                                element={<UsersPage />}
                             />
                             <Route
                                 path="/admin/classes"
@@ -50,7 +50,7 @@ export default function App() {
                             />
                             <Route
                                 path="/admin/subjects"
-                                element={<RoleFeaturePage title="Subjects" />}
+                                element={<SubjectsPage />}
                             />
                             <Route
                                 path="/admin/teaching-assignments"
@@ -165,3 +165,4 @@ export default function App() {
         </BrowserRouter>
     );
 }
+

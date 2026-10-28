@@ -1,77 +1,51 @@
 import { Router } from "express";
 import { z } from "zod";
 import { authenticate } from "../../middleware/auth.middleware.js";
-
-import {
-    loginUser,
-    registerUser,
-} from "./auth.service.js";
+import { bootstrapAdminAccount, loginUser } from "./auth.service.js";
 import { getMe } from "./auth.controller.js";
 
 const router = Router();
-
-const registerSchema = z.object({
-    email: z.string().email(),
-    password: z.string().min(8),
-    role: z.enum([
-        "ADMIN",
-        "TEACHER",
-        "STUDENT",
-        "PARENT",
-    ]),
-});
-
 const loginSchema = z.object({
-    email: z.string().email(),
+    email: z.string().trim().email(),
     password: z.string().min(1),
 });
+const bootstrapSchema = z.object({
+    email: z.string().trim().email().max(255),
+    password: z.string().min(12).max(128),
+    bootstrapKey: z.string().min(1).max(256),
+});
 
-router.post("/register", async (req, res) => {
+// Accounts are provisioned by an administrator. Keep this endpoint explicit for
+// older clients and explain the supported path instead of silently self-signing.
+router.post("/register", (_req, res) => res.status(403).json({
+    message: "Public registration is disabled. Ask a school administrator to create your account.",
+}));
+
+router.post("/bootstrap-admin", async (req, res) => {
+    const parsed = bootstrapSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: parsed.error.issues[0]?.message ?? "Invalid bootstrap request" });
     try {
-        const data = registerSchema.parse(req.body);
-
-        const user = await registerUser(
-            data.email,
-            data.password,
-            data.role,
-        );
-
-        res.status(201).json({
-            user,
-        });
+        const user = await bootstrapAdminAccount(parsed.data);
+        return res.status(201).json({ user });
     } catch (error) {
-        res.status(400).json({
-            message:
-                error instanceof Error
-                    ? error.message
-                    : "Registration failed",
-        });
+        if (error instanceof Error && "statusCode" in error) {
+            return res.status(Number(error.statusCode)).json({ message: error.message });
+        }
+        console.error("Bootstrap admin error:", error);
+        return res.status(500).json({ message: "Could not provision administrator" });
     }
 });
 
 router.post("/login", async (req, res) => {
+    const parsed = loginSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: parsed.error.issues[0]?.message ?? "Invalid login request" });
     try {
-        const data = loginSchema.parse(req.body);
-
-        const result = await loginUser(
-            data.email,
-            data.password,
-        );
-
-        res.json(result);
+        return res.json(await loginUser(parsed.data.email.toLowerCase(), parsed.data.password));
     } catch (error) {
-        res.status(401).json({
-            message:
-                error instanceof Error
-                    ? error.message
-                    : "Login failed",
-        });
+        return res.status(401).json({ message: error instanceof Error ? error.message : "Login failed" });
     }
 });
 
-// Resolve the current account from the database rather than returning only the
-// JWT payload. This keeps the frontend session in sync with the persisted user.
 router.get("/me", authenticate, getMe);
-
 
 export default router;

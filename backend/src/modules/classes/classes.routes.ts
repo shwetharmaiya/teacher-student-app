@@ -18,8 +18,8 @@ const router = Router();
 const classSchema = z.object({
     grade: z.string().trim().min(1).max(64),
     section: z.string().trim().min(1).max(3).transform((value) => value.toUpperCase()),
-    teacherName: z.string().trim().max(120).optional(),
-    teacherId: z.string().uuid().optional(),
+    teacherName: z.string().trim().max(120).nullable().optional(),
+    teacherId: z.string().uuid().nullable().optional(),
     room: z.string().trim().min(1).max(32),
     capacity: z.coerce.number().int().min(1).max(200),
 });
@@ -49,16 +49,12 @@ router.post("/:id/enrollments", async (req, res) => {
     try {
         const classId = z.string().uuid().parse(req.params.id);
         const studentId = z.object({ studentId: z.string().uuid() }).parse(req.body).studentId;
-        const people = await listSchoolPeople();
-        if (!people.some((person) => person.id === studentId && person.role === "STUDENT")) {
-            return res.status(400).json({ message: "Select a registered student account" });
-        }
         return res.status(201).json({ enrollment: await addEnrollment(classId, studentId) });
     } catch (error) {
-        return res.status(400).json({ message: getErrorMessage(error, "Could not enrol student") });
+        const conflict = error instanceof Error && (error.message.includes("capacity") || error.message.includes("already enrolled"));
+        return res.status(conflict ? 409 : 400).json({ message: getErrorMessage(error, "Could not enrol student") });
     }
 });
-
 router.delete("/:id/enrollments/:studentId", async (req, res) => {
     try {
         const classId = z.string().uuid().parse(req.params.id);
@@ -91,7 +87,8 @@ router.put("/:id", async (req, res) => {
 
         return res.json({ class: classRecord });
     } catch (error) {
-        return res.status(400).json({ message: getErrorMessage(error, "Could not update class") });
+        const status = error instanceof Error && (error.message.includes("Capacity cannot") || error.message.includes("already exists")) ? 409 : 400;
+        return res.status(status).json({ message: getErrorMessage(error, "Could not update class") });
     }
 });
 
@@ -115,3 +112,8 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 export default router;
+
+
+
+
+

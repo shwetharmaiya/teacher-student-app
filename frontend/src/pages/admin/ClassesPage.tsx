@@ -115,7 +115,7 @@ export default function ClassesPage() {
     event.preventDefault();
     setIsSaving(true);
     setError("");
-    const payload = { grade: form.grade, section: form.section, teacherName: form.teacher || undefined, teacherId: form.teacherId ?? undefined, room: form.room, capacity: form.capacity };
+    const payload = { grade: form.grade, section: form.section, teacherName: form.teacher || null, teacherId: form.teacherId, room: form.room, capacity: form.capacity };
 
     try {
       const response = editingClass
@@ -161,6 +161,10 @@ export default function ClassesPage() {
 
   const saveEnrollments = async () => {
     if (!enrollmentClass) return;
+    if (enrolledStudentIds.length > enrollmentClass.capacity) {
+      setError("This class has a capacity of " + enrollmentClass.capacity + ". Remove a student before saving.");
+      return;
+    }
     setIsSavingEnrollments(true);
     setError("");
     try {
@@ -263,3 +267,7 @@ export default function ClassesPage() {
     </section>
   );
 }
+
+
+
+

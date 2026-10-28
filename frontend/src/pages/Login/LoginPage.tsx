@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import type { FormEvent } from "react";
 import { useAuth } from "../../auth/AuthContext";
 
@@ -89,8 +89,9 @@ export default function Login() {
             {loading ? "Signing in..." : "Login"}
           </button>
         </form>
-        <p className="form-footer">Need an account? <Link to="/register">Register</Link></p>
+        <p className="form-footer">Need an account? Ask your school administrator to create it.</p>
       </section>
     </main>
   );
 }
+

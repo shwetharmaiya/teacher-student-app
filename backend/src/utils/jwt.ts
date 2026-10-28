@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 export interface JwtPayload {
   userId: string;
   role: "ADMIN" | "TEACHER" | "STUDENT" | "PARENT";
+  tokenVersion?: string;
 }
 
 export function createToken(payload: JwtPayload) {

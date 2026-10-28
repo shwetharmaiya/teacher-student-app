@@ -14,6 +14,8 @@ export async function createTeacherSubjectAssignment(input: {
     classId: string;
     subjectId: string;
 }) {
+    const [teacher] = await db.select({ role: users.role }).from(users).where(eq(users.id, input.teacherId)).limit(1);
+    if (!teacher || teacher.role !== "TEACHER") throw new Error("Select a registered teacher account");
     const [assignment] = await db
         .insert(teacherSubjectAssignments)
         .values(input)
@@ -170,3 +172,4 @@ export async function deleteTeacherSubjectAssignment(
 
     return assignment ?? null;
 }
+

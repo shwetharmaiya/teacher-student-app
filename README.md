@@ -1,29 +1,29 @@
 # Teacher–Student App
 
-A role-based school management application built as a React and TypeScript frontend with an Express and TypeScript REST API backed by PostgreSQL and Drizzle ORM. The current implementation supports account registration and login, class and enrollment administration, teacher-to-class/subject assignments, teacher class workspaces, attendance, and assignment publishing and student submissions.
+A role-based school management application with a React and TypeScript frontend, an Express and TypeScript REST API, and PostgreSQL managed with Drizzle ORM. Accounts are provisioned by an administrator; current workflows include classes and enrollment, teaching assignments, teacher attendance and assignments, and student assignment submissions.
 
 ## Project status
 
-This is an in-progress application. The core app shell and several academic workflows are connected to the API and database. Some dashboard pages are still summaries or placeholders; this README distinguishes shipped behavior from planned work.
+This is an in-progress application. The core app shell and several academic workflows are connected to the API and database. Some dashboard pages are still summaries or placeholders; Phases 1 and 2 are implemented, while later phases remain planned.
 
 ### Implemented
 
 - Four account roles: `ADMIN`, `TEACHER`, `STUDENT`, and `PARENT`.
-- Registration and login using bcrypt password hashing and signed JWT bearer tokens.
+- One-time first-admin bootstrap, admin-managed user creation, and login using bcrypt password hashing and signed JWT bearer tokens.
 - Session persistence in browser `localStorage`, session restoration through `/api/auth/me`, protected routes, and role-based frontend navigation.
-- Admin class management: create, list, edit, delete, and manage enrolled students.
-- Admin teaching assignments: assign teachers, classes, and subjects; view and remove assignments.
+- Admin account management: create, list, edit, and delete accounts with server-side pagination and email search; safe response projections omit password hashes. Public registration is disabled.
+- Admin subject management and teaching assignments: create, list, edit, delete subjects; assign teachers, classes, and subjects; view and remove assignments.
 - Teacher dashboard and assigned teaching list; class workspace with enrolled students, assignment creation, and attendance entry.
-- Student dashboard and assignment list; API endpoints include assignment submission.
+- Student dashboard and assignment list/detail/submission workflow, including resubmission until grading.
 - PostgreSQL schema and Drizzle migration history for users, classes, enrollments, subjects, teacher assignments, assignments, attendance, and submissions.
 - Health endpoint at `GET /api/health`.
 
 ### Still in progress
 
 - Parent dashboard data and parent-to-student linking.
-- Admin user management and a complete subject management screen.
+
 - Student class, attendance, marks, and grade views; teacher student, marks, and assignment navigation pages.
-- Assignment detail/submission experience in the frontend (the backend supports creating submissions).
+
 - Grading, feedback, reporting, announcements, messaging, and notifications.
 - Production deployment configuration and automated tests.
 
@@ -70,8 +70,8 @@ Responsibilities should remain separated as features grow:
 
 ### Current feature boundaries
 
-- `backend/src/server.ts` mounts `/api/auth`, `/api/classes`, `/api/subjects`, `/api/teacher`, `/api/student`, and `/api/class-enrollments`, and exposes `/api/health`.
-- `backend/src/modules/auth/` handles register/login/current-user resolution. `backend/src/middleware/` validates JWTs and role access.
+- `backend/src/server.ts` mounts `/api/auth`, `/api/admin/users`, `/api/classes`, `/api/subjects`, `/api/teacher`, `/api/student`, and `/api/class-enrollments`, and exposes `/api/health`.
+- `backend/src/modules/auth/` handles bootstrap, login, and current-user resolution; `backend/src/modules/admin/` manages accounts. `backend/src/middleware/` validates JWTs against the current account and enforces role access.
 - `backend/src/modules/classes/` owns class and enrollment administration; `subjects/` owns subjects and teacher-class-subject assignments.
 - `backend/src/modules/academic/` owns teacher/student dashboards, teacher class workspace, assignments, and attendance. Student submission operations live in `backend/src/services/` and `backend/src/routes/`.
 - `frontend/src/app/App.tsx` defines public and role-gated routes. `frontend/src/auth/` manages session restoration and route guards; `frontend/src/services/api/client.ts` centralizes HTTP calls.
@@ -106,6 +106,7 @@ Create `backend/.env` (do not commit secrets):
 PORT=3000
 DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/teacher_student_app
 JWT_SECRET=replace-with-a-long-random-secret
+BOOTSTRAP_ADMIN_KEY=replace-with-a-one-time-random-secret
 FRONTEND_URL=http://localhost:5173
 ```
 
@@ -165,14 +166,22 @@ The frontend also has `npm run preview` to serve a production build locally. The
 
 ## First use
 
-1. Start PostgreSQL, apply backend migrations, and start both frontend and backend.
-2. Register at `/register` using a valid email, a password of at least eight characters, and a role.
-3. Sign in at `/login`. The app stores the returned access token in `localStorage`, then uses it for API requests and restores the user on refresh.
-4. The root route (`/`) redirects authenticated users to the dashboard for their role. `/unauthorized` is shown when a signed-in user visits a route for another role.
-5. For a useful admin-to-teacher workflow, register accounts for the roles you need; create subjects and a class, assign a teacher to the class/subject, enroll student accounts, then sign in as the assigned teacher to publish work or record attendance.
+1. Start PostgreSQL and apply backend migrations.
+2. Before any administrator exists, set `BOOTSTRAP_ADMIN_KEY` in `backend/.env`, choose a long random value, and start the API. Keep the key secret.
+3. Send one `POST /api/auth/bootstrap-admin` request with the bootstrap key, administrator email, and a password of at least 12 characters. Example PowerShell request (use the same secret configured in the backend):
 
-**Access-control note:** registration currently accepts any of the four roles, including `ADMIN`. This is convenient for development but is not safe for an open production deployment. Restrict admin creation before exposing public registration. Authentication is enforced by API middleware; frontend route guards are for navigation and are not a security boundary.
+   ```powershell
+   $bootstrapKey = Read-Host "Bootstrap key"
+   $password = Read-Host "Initial admin password"
+   $body = @{ email = "admin@school.example"; password = $password; bootstrapKey = $bootstrapKey } | ConvertTo-Json
+   Invoke-RestMethod -Uri http://localhost:3000/api/auth/bootstrap-admin -Method Post -ContentType "application/json" -Body $body
+   Remove-Variable bootstrapKey, password, body
+   ```
 
+4. After bootstrap succeeds, remove `BOOTSTRAP_ADMIN_KEY` from `backend/.env` and restart the API. If the key remains configured, the bootstrap endpoint refuses a second admin; removing the secret closes the setup path explicitly.
+5. Sign in at `/login`. The admin creates teacher, student, parent, and any additional admin accounts at `/admin/users`, setting an initial password to share through the school's approved channel. The old `/register` page explains this policy; `POST /api/auth/register` returns `403`.
+6. Create subjects and a class, assign teachers to class/subject pairs, enroll student accounts, and sign in as the assigned teacher to publish assignments or record attendance.
+7. The root route (`/`) redirects authenticated users to their role dashboard. `/unauthorized` appears when a signed-in user visits a route for another role. The API checks the account and role on every protected request. New tokens include an account-version value, so after a password, email, or role update the user signs in again.
 ## API overview
 
 All routes are mounted under `/api`. Protected endpoints expect `Authorization: Bearer <token>`. The API validates many request bodies with Zod and responds with JSON.
@@ -180,7 +189,11 @@ All routes are mounted under `/api`. Protected endpoints expect `Authorization: 
 | Method | Path | Access | Purpose |
 | --- | --- | --- | --- |
 | `GET` | `/health` | Public | API status |
-| `POST` | `/auth/register` | Public | Create an account (`email`, `password`, `role`) |
+| `POST` | `/auth/register` | Public | Disabled; returns `403` and directs account requests to the school admin |
+| `POST` | `/auth/bootstrap-admin` | Public, one time | Create the first admin using `BOOTSTRAP_ADMIN_KEY` (password minimum 12 characters) |
+| `GET` | `/admin/users?search=&role=&page=&limit=` | Admin | Search and paginate safe account projections (limit max 100) |
+| `POST` | `/admin/users` | Admin | Create an account with a hashed password |
+| `PUT`, `DELETE` | `/admin/users/:id` | Admin | Update or delete an account; self-delete and last-admin removal are blocked |
 | `POST` | `/auth/login` | Public | Authenticate and receive token/user |
 | `GET` | `/auth/me` | Authenticated | Resolve current user |
 | `GET`, `POST` | `/classes` | Admin | List/create classes |
@@ -188,6 +201,7 @@ All routes are mounted under `/api`. Protected endpoints expect `Authorization: 
 | `PUT`, `DELETE` | `/classes/:id` | Admin | Update/delete a class |
 | `GET`, `POST` | `/classes/:id/enrollments` | Admin | List/add enrolled students |
 | `DELETE` | `/classes/:id/enrollments/:studentId` | Admin | Remove an enrolled student |
+| `POST` | `/class-enrollments` | Admin | Enroll a student after UUID, role, duplicate, and class-capacity checks |
 | `GET` | `/subjects` | Admin, teacher | List subjects |
 | `POST`, `PUT`, `DELETE` | `/subjects` and `/subjects/:id` | Admin | Manage subjects |
 | `GET`, `POST` | `/subjects/assignments` | Admin | List/create teacher-class-subject assignments |
@@ -226,14 +240,14 @@ Implement each workflow vertically: schema/migration, API contract and validatio
 - Students can submit and resubmit text, including after the due date. Resubmission updates the existing submission and clears prior grading fields; a graded submission is locked.
 - The list and detail pages show loading, empty, overdue, submitted/graded, retry, success, and API error states.
 
-### Phase 2 — Harden identity and administration
+### Phase 2 — Harden identity and administration (implemented)
 
-1. Stop accepting `ADMIN` from public registration. Add a deliberate bootstrap/admin-provisioning path, and make account creation an admin workflow or invitation flow.
-2. Add user-management API operations with password hashing, role validation, duplicate-email handling, and safe response projections that never return `passwordHash`.
-3. Add admin user and subject screens using the existing classes/subjects API patterns.
-4. Enforce class capacity and role constraints (only student accounts can enroll; only teacher accounts can be assigned) in services and database constraints where possible.
-5. Add pagination/search after basic list/create/update/delete behavior is stable.
-
+- Public registration now returns `403`; the public UI points users to their school administrator and no longer exposes role selection or account creation.
+- The first administrator is created through `POST /api/auth/bootstrap-admin`, protected by a configured one-time secret, a 12-character minimum password, and a PostgreSQL advisory lock. The endpoint refuses to create another admin after the first exists.
+- Administrators can create, search, filter by role, paginate, edit, reset passwords, and delete accounts. Passwords are bcrypt-hashed; list and mutation responses select only public account fields. Self-deletion, self-role changes, and removal/demotion of the final administrator are blocked.
+- Admin pages now provide account and subject CRUD. Subject code uniqueness errors are returned as `409`.
+- Enrollment checks run in a transaction that locks the class row, verifies the student role, detects duplicates, and enforces the seat limit. Class capacity cannot be lowered below current enrollment. Existing foreign keys and unique indexes enforce record links and duplicate enrollment; cross-table role rules are enforced in services. Class teachers and teacher-subject assignments must have the `TEACHER` role.
+- The account list supports email search, role filters, and server-side pagination (default 20 per page; maximum 100).
 ### Phase 3 — Complete attendance and student views
 
 1. Add student endpoints for their enrolled classes and attendance history/summary. Derive student identity from the authenticated token, never from a client-supplied student ID.
@@ -300,3 +314,7 @@ frontend/
   src/pages/         Admin, teacher, student, and parent screens
   src/services/api/  Shared API fetch client
 ```
+
+
+
+

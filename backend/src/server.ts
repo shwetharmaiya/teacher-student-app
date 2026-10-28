@@ -4,6 +4,7 @@ import express from "express";
 import cors from "cors";
 
 import authRoutes from "./modules/auth/auth.routes.js";
+import adminUserRoutes from "./modules/admin/users.routes.js";
 import classRoutes from "./modules/classes/classes.routes.js";
 import { studentRouter, teacherRouter } from "./modules/academic/academic.routes.js";
 import subjectRoutes from "./modules/subjects/subjects.routes.js"; 
@@ -30,6 +31,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/admin/users", adminUserRoutes);
 app.use("/api/classes", classRoutes);
 app.use("/api/subjects", subjectRoutes);
 app.use("/api/teacher", teacherRouter);
@@ -43,3 +45,4 @@ app.use(
 app.listen(PORT, () => {
     console.log(`API running on http://localhost:${PORT}`);
 });
+

@@ -1645,3 +1645,40 @@ a { color: inherit; }
         flex-direction: column;
     }
 }
+
+.admin-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 20px;
+    color: #64748b;
+}
+
+.admin-pagination > div {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.admin-form-help {
+    margin: 14px 0 0;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.admin-management-page .classes-card {
+    overflow: hidden;
+}
+
+@media (max-width: 650px) {
+    .admin-pagination {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .admin-pagination > div {
+        justify-content: space-between;
+    }
+}
