@@ -6,7 +6,7 @@ type TeacherClass = { id: string; grade: string; section: string; room: string; 
 
 const today = new Date().toISOString().slice(0, 10);
 
-export default function TeacherClassesPage() {
+export default function TeacherClassesPage({ mode = "classes" }: { mode?: "classes" | "attendance" }) {
   const [classes, setClasses] = useState<TeacherClass[]>([]);
   const [selectedClassId, setSelectedClassId] = useState("");
   const [attendanceDate, setAttendanceDate] = useState(today);
@@ -80,7 +80,7 @@ export default function TeacherClassesPage() {
   };
 
   return <section>
-    <div className="page-heading"><div><p className="eyebrow">Teaching</p><h2>My classes</h2><p className="page-intro">Review your class roster and record daily attendance.</p></div></div>
+    <div className="page-heading"><div><p className="eyebrow">Teaching</p><h2>{mode === "attendance" ? "Attendance" : "My classes"}</h2><p className="page-intro">{mode === "attendance" ? "Take and update attendance for students in your assigned classes." : "Review your class roster and record daily attendance."}</p></div></div>
     {error && <p className="classes-error" role="alert">{error}</p>}
     {isLoading && classes.length === 0 && <article className="panel" role="status">Loading your classes…</article>}
     {!isLoading && !error && classes.length === 0 && <article className="panel"><h3>No assigned classes</h3><p>An administrator needs to connect your teacher account to a class before it appears here.</p></article>}

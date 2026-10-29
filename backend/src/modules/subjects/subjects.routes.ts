@@ -64,7 +64,15 @@ router.delete("/:id", authorizeRoles("ADMIN"), async (req, res) => {
 });
 
 function isDuplicateCode(error: unknown) {
-    return typeof error === "object" && error !== null && "code" in error && error.code === "23505";
+    let current: unknown = error;
+    const visited = new Set<object>();
+    while (typeof current === "object" && current !== null && !visited.has(current)) {
+        visited.add(current);
+        const databaseError = current as { code?: unknown; cause?: unknown };
+        if (databaseError.code === "23505") return true;
+        current = databaseError.cause;
+    }
+    return false;
 }
 
 

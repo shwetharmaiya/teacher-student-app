@@ -203,6 +203,12 @@ test("Phase 7 API integration checks", { skip: !isDedicatedTestDatabase && "Set 
         assert.equal(teacherOwnRoster.status, 200);
         assert.equal(teacherOwnRoster.body.class.students, 1);
         assert.equal(teacherOwnRoster.body.students.length, 1);
+        const teacherStudents = await request("/api/teacher/students", { token: tokens.teacher });
+        assert.equal(teacherStudents.status, 200);
+        assert.ok(teacherStudents.body.students.some((student) => student.studentId === fixtureIds.student && student.classId === classIds.assigned));
+        const otherTeacherStudents = await request("/api/teacher/students", { token: tokens.otherTeacher });
+        assert.equal(otherTeacherStudents.status, 200);
+        assert.ok(!otherTeacherStudents.body.students.some((student) => student.studentId === fixtureIds.student));
     });
 
     await t.test("enrollment enforces student roles, duplicates, and class capacity", async () => {
@@ -229,10 +235,12 @@ test("Phase 7 API integration checks", { skip: !isDedicatedTestDatabase && "Set 
         assert.equal(beforeCommit.rows[0].total, 0);
         const saved = await request(`/api/teacher/classes/${classIds.assigned}/attendance`, { method: "PUT", token: tokens.teacher, body: { attendanceDate: "2026-01-15", entries: [{ studentId: fixtureIds.student, status: "PRESENT" }] } });
         assert.equal(saved.status, 200);
-        const ownAttendance = await request("/api/student/attendance?studentId=ignored-other-student-id", { token: tokens.student });
+        await pool.query("insert into attendance_records (class_id, student_id, attendance_date, status) values ($1, $2, $3, 'ABSENT')", [classIds.capacity, fixtureIds.otherStudent, "2026-01-15"]);
+        const ownAttendance = await request(`/api/student/attendance?studentId=${fixtureIds.otherStudent}`, { token: tokens.student });
         assert.equal(ownAttendance.status, 200);
         assert.equal(ownAttendance.body.summary.recorded, 1);
-        assert.ok(ownAttendance.body.records.every((record) => record.studentId === fixtureIds.student));
+        assert.equal(ownAttendance.body.records.length, 1);
+        assert.ok(ownAttendance.body.records.every((record) => record.classId === classIds.assigned));
         const ownClasses = await request("/api/student/classes", { token: tokens.student });
         assert.ok(ownClasses.body.classes.some((item) => item.id === classIds.assigned));
     });

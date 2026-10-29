@@ -15,22 +15,15 @@ export async function listSubjects() {
 }
 
 export async function createSubject(input: SubjectInput) {
-    try {
-        const [subject] = await db
-            .insert(subjects)
-            .values({
-                name: input.name,
-                code: input.code.toUpperCase(),
-            })
-            .returning();
+    const [subject] = await db
+        .insert(subjects)
+        .values({
+            name: input.name,
+            code: input.code.toUpperCase(),
+        })
+        .returning();
 
-        return subject;
-    } catch (error) {
-        console.error("CREATE SUBJECT DATABASE ERROR:");
-        console.error(error);
-
-        throw error;
-    }
+    return subject;
 }
 
 export async function updateSubject(

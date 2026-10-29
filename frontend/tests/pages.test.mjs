@@ -116,10 +116,16 @@ test("student classes, attendance, and grade screens render their initial states
     }
 });
 
-test("teacher classes, assignment review, and class workspace screens render without crashing", async () => {
+test("teacher students, attendance, classes, assignment review, and workspace screens render", async () => {
+    const students = await renderPage("/src/pages/teacher/TeacherStudentsPage.tsx");
+    assert.match(students, /My students/);
+    assert.match(students, /Loading your students/);
     const classes = await renderPage("/src/pages/teacher/TeacherClassesPage.tsx");
     assert.match(classes, /My classes/);
     assert.match(classes, /Loading your classes/);
+    const attendance = await renderPage("/src/pages/teacher/TeacherClassesPage.tsx", { props: { mode: "attendance" } });
+    assert.match(attendance, /<h2>Attendance<\/h2>/);
+    assert.match(attendance, /Loading your classes/);
     const review = await renderPage("/src/pages/teacher/TeacherSubmissionsPage.tsx");
     assert.match(review, /Assignment review/);
     assert.match(review, /Loading assignments/);

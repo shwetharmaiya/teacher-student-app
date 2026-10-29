@@ -8,6 +8,7 @@ import {
     getTeacherClassDetails,
     getStudentDashboard,
     getTeacherDashboard,
+    getTeacherStudents,
     getStudentClasses,
     getStudentAttendance,
     isTeacherClass,
@@ -50,6 +51,14 @@ const gradeSchema = z.discriminatedUnion("status", [
 teacherRouter.use(authenticate, authorizeRoles("TEACHER"));
 teacherRouter.get("/dashboard", async (req: AuthenticatedRequest, res) => {
     res.json(await getTeacherDashboard(req.user!.userId));
+});
+teacherRouter.get("/students", async (req: AuthenticatedRequest, res) => {
+    try {
+        return res.json({ students: await getTeacherStudents(req.user!.userId) });
+    } catch (error) {
+        console.error("List teacher students error:", error);
+        return res.status(500).json({ message: "Could not load your students" });
+    }
 });
 teacherRouter.get("/assignments", async (req: AuthenticatedRequest, res) => {
     try {

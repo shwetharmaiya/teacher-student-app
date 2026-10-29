@@ -206,6 +206,8 @@ The frontend also has `npm run preview` to serve a production build locally. See
 
 Backend API integration tests require a dedicated PostgreSQL test database. They refuse to use `DATABASE_URL` as a fallback; the test runner only connects when `TEST_DATABASE_URL` is explicitly set. Apply migrations to that isolated database before running:
 
+The test runner loads `backend/.env` through `dotenv`; define `TEST_DATABASE_URL` there using the exact variable name with underscores. Alternatively, set it in the shell used to run `npm test`. Do not put it in `frontend/.env`.
+
 ```powershell
 cd backend
 $env:DATABASE_URL = "postgresql://USER:PASSWORD@localhost:5432/teacher_student_app_test"
@@ -214,6 +216,8 @@ npm run db:migrate
 npm test
 Remove-Item Env:DATABASE_URL, Env:TEST_DATABASE_URL
 ```
+
+If using `backend/.env`, set both `DATABASE_URL` and `TEST_DATABASE_URL` to the dedicated test database before migration and testing. Never point either variable at a database containing data you need to keep.
 
 The API suite creates uniquely named accounts/classes, covers workflows from Phases 1–7, and removes its fixtures. It checks assignment detail, content limits, resubmission and late work; account and subject administration; class ownership, enrollment, and capacity; attendance ownership, atomic roster saves, and student identity; parent linking/revocation and child scoping; grade validation, return/resubmit/finalize transitions and grade views; announcement visibility, notification ownership, report filters/totals, and audit events. Frontend `npm test` smoke-renders login, student assignment/class/attendance/grade pages, teacher class/review/workspace pages, parent attendance/assignment/grade tabs, admin user/link pages, announcements, reports, and protected-route restoration. GitHub Actions runs both test commands, applies migrations on a disposable PostgreSQL service, and builds both applications.
 

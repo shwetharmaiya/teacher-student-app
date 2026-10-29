@@ -13,9 +13,9 @@ import AdminDashboard from "../pages/admin/AdminDashboard";
 import ClassesPage from "../pages/admin/ClassesPage";
 import TeacherDashboard from "../pages/teacher/TeacherDashboard";
 import TeacherClassesPage from "../pages/teacher/TeacherClassesPage";
+import TeacherStudentsPage from "../pages/teacher/TeacherStudentsPage";
 import StudentDashboard from "../pages/student/StudentDashboard";
 import ParentDashboard from "../pages/parent/ParentDashboard";
-import RoleFeaturePage from "../pages/RoleFeaturePage";
 import AppLayout from "../components/layout/AppLayout";
 import RoleHomeRedirect from "../auth/RoleHomeRedirect";
 import TeachingAssignmentsPage from "../pages/admin/TeachingAssignmentsPage";
@@ -85,13 +85,11 @@ export default function App() {
                             />
                             <Route
                                 path="/teacher/students"
-                                element={
-                                    <RoleFeaturePage title="My students" />
-                                }
+                                element={<TeacherStudentsPage />}
                             />
                             <Route
                                 path="/teacher/attendance"
-                                element={<RoleFeaturePage title="Attendance" />}
+                                element={<TeacherClassesPage mode="attendance" />}
                             />
                             <Route
                                 path="/teacher/assignments"

@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import {
     assignments,
@@ -11,10 +11,18 @@ import {
 } from "../../db/schema.js";
 
 export async function getTeacherDashboard(teacherId: string) {
+    const teachingAssignments = await db
+        .select({ classId: teacherSubjectAssignments.classId })
+        .from(teacherSubjectAssignments)
+        .where(eq(teacherSubjectAssignments.teacherId, teacherId));
+    const assignedClassIds = [...new Set(teachingAssignments.map(({ classId }) => classId))];
+    const teacherClassFilter = assignedClassIds.length > 0
+        ? or(eq(classes.teacherId, teacherId), inArray(classes.id, assignedClassIds))
+        : eq(classes.teacherId, teacherId);
     const teacherClasses = await db
         .select()
         .from(classes)
-        .where(eq(classes.teacherId, teacherId))
+        .where(teacherClassFilter)
         .orderBy(asc(classes.grade), asc(classes.section));
     const classIds = teacherClasses.map((classRecord) => classRecord.id);
 
@@ -44,6 +52,27 @@ export async function getTeacherDashboard(teacherId: string) {
         totalStudents: enrollmentCounts.reduce((total, item) => total + item.studentCount, 0),
         assignments: recentAssignments,
     };
+}
+
+export async function getTeacherStudents(teacherId: string) {
+    const { classes: teacherClasses } = await getTeacherDashboard(teacherId);
+    const classIds = teacherClasses.map(({ id }) => id);
+    if (classIds.length === 0) return [];
+
+    return db
+        .select({
+            studentId: users.id,
+            studentEmail: users.email,
+            classId: classes.id,
+            grade: classes.grade,
+            section: classes.section,
+            room: classes.room,
+        })
+        .from(classEnrollments)
+        .innerJoin(classes, eq(classEnrollments.classId, classes.id))
+        .innerJoin(users, eq(classEnrollments.studentId, users.id))
+        .where(inArray(classes.id, classIds))
+        .orderBy(asc(classes.grade), asc(classes.section), asc(users.email));
 }
 
 export async function getStudentDashboard(studentId: string) {
