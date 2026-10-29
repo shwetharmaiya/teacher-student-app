@@ -139,3 +139,29 @@ export async function getParentAssignments(parentId: string, studentId: string) 
     if (!child) return null;
     return { child, assignments: await getAssignmentsForStudent(parentId, studentId) };
 }
+
+export async function getParentGrades(parentId: string, studentId: string) {
+    const child = await requireLinkedStudent(parentId, studentId);
+    if (!child) return null;
+    const grades = await db.select({
+        id: submissions.id,
+        assignmentId: assignments.id,
+        assignmentTitle: assignments.title,
+        classId: classes.id,
+        grade: classes.grade,
+        section: classes.section,
+        submittedAt: submissions.submittedAt,
+        marks: submissions.marks,
+        feedback: submissions.feedback,
+        gradedAt: submissions.gradedAt,
+    }).from(submissions)
+        .innerJoin(assignments, eq(submissions.assignmentId, assignments.id))
+        .innerJoin(classes, eq(assignments.classId, classes.id))
+        .innerJoin(parentStudentLinks, and(
+            eq(parentStudentLinks.parentId, parentId),
+            eq(parentStudentLinks.studentId, studentId),
+        ))
+        .where(and(eq(submissions.studentId, studentId), eq(submissions.status, "GRADED")))
+        .orderBy(desc(submissions.gradedAt));
+    return { child, grades };
+}

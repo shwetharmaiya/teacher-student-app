@@ -13,6 +13,7 @@ import {
     isTeacherClass,
     recordAttendance,
 } from "./academic.service.js";
+import { getStudentGrades, getTeacherAssignmentSubmissions, getTeacherAssignments, gradeSubmission } from "../../services/grading.service.js";
 
 const teacherRouter = Router();
 const studentRouter = Router();
@@ -34,10 +35,58 @@ const attendanceSchema = z.object({
         "Each student can appear only once in an attendance roster",
     ),
 });
+const gradeSchema = z.discriminatedUnion("status", [
+    z.object({
+        status: z.literal("GRADED"),
+        marks: z.number().int().min(0).max(100),
+        feedback: z.string().trim().max(2000).optional(),
+    }),
+    z.object({
+        status: z.literal("RETURNED"),
+        feedback: z.string().trim().min(1, "Feedback is required when returning work").max(2000),
+    }),
+]);
 
 teacherRouter.use(authenticate, authorizeRoles("TEACHER"));
 teacherRouter.get("/dashboard", async (req: AuthenticatedRequest, res) => {
     res.json(await getTeacherDashboard(req.user!.userId));
+});
+teacherRouter.get("/assignments", async (req: AuthenticatedRequest, res) => {
+    try {
+        return res.json({ assignments: await getTeacherAssignments(req.user!.userId) });
+    } catch (error) {
+        console.error("List teacher assignments error:", error);
+        return res.status(500).json({ message: "Could not load assignments" });
+    }
+});
+teacherRouter.get("/assignments/:assignmentId/submissions", async (req: AuthenticatedRequest, res) => {
+    const assignmentId = z.string().uuid().safeParse(req.params.assignmentId);
+    if (!assignmentId.success) return res.status(400).json({ message: "Invalid assignment ID" });
+    try {
+        const result = await getTeacherAssignmentSubmissions(req.user!.userId, assignmentId.data);
+        if (!result) return res.status(404).json({ message: "Assignment not found" });
+        return res.json(result);
+    } catch (error) {
+        console.error("List assignment submissions error:", error);
+        return res.status(500).json({ message: "Could not load submissions" });
+    }
+});
+teacherRouter.put("/submissions/:submissionId/grade", async (req: AuthenticatedRequest, res) => {
+    const submissionId = z.string().uuid().safeParse(req.params.submissionId);
+    const input = gradeSchema.safeParse(req.body);
+    if (!submissionId.success) return res.status(400).json({ message: "Invalid submission ID" });
+    if (!input.success) return res.status(400).json({ message: input.error.issues[0]?.message ?? "Invalid grade" });
+    try {
+        const submission = await gradeSubmission(req.user!.userId, submissionId.data, input.data);
+        if (!submission) return res.status(404).json({ message: "Submission not found" });
+        return res.json({ submission });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Could not save grade";
+        if (message.includes("only review")) return res.status(403).json({ message });
+        if (message.includes("already graded") || message.includes("current state")) return res.status(409).json({ message });
+        console.error("Grade submission error:", error);
+        return res.status(500).json({ message: "Could not save grade" });
+    }
 });
 
 teacherRouter.get("/classes/:classId", async (req: AuthenticatedRequest, res) => {
@@ -98,6 +147,14 @@ studentRouter.get("/attendance", async (req: AuthenticatedRequest, res) => {
         return res.json(await getStudentAttendance(req.user!.userId, classId));
     } catch (error) {
         return res.status(400).json({ message: error instanceof Error ? error.message : "Could not load attendance" });
+    }
+});
+studentRouter.get("/grades", async (req: AuthenticatedRequest, res) => {
+    try {
+        return res.json({ grades: await getStudentGrades(req.user!.userId) });
+    } catch (error) {
+        console.error("Load student grades error:", error);
+        return res.status(500).json({ message: "Could not load grades" });
     }
 });
 

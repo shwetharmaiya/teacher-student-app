@@ -28,6 +28,8 @@ import StudentAttendancePage from "../pages/student/StudentAttendancePage";
 import ParentLinksPage from "../pages/admin/ParentLinksPage";
 import ParentChildrenPage from "../pages/parent/ParentChildrenPage";
 import ParentRecordsPage from "../pages/parent/ParentRecordsPage";
+import StudentGradesPage from "../pages/student/StudentGradesPage";
+import TeacherSubmissionsPage from "../pages/teacher/TeacherSubmissionsPage";
 import "../index.css";
 
 export default function App() {
@@ -87,13 +89,11 @@ export default function App() {
                             />
                             <Route
                                 path="/teacher/assignments"
-                                element={
-                                    <RoleFeaturePage title="Assignments" />
-                                }
+                                element={<TeacherSubmissionsPage />}
                             />
                             <Route
                                 path="/teacher/marks"
-                                element={<RoleFeaturePage title="Marks" />}
+                                element={<TeacherSubmissionsPage />}
                             />
                             <Route
                                 path="/teacher/my-teaching"
@@ -126,7 +126,7 @@ export default function App() {
                             />
                             <Route
                                 path="/student/marks"
-                                element={<RoleFeaturePage title="Marks" />}
+                                element={<StudentGradesPage />}
                             />
                             <Route
                                 path="/student/attendance"
@@ -160,7 +160,7 @@ export default function App() {
                             <Route path="/parent/assignments" element={<ParentRecordsPage type="assignments" />} />
                             <Route
                                 path="/parent/marks"
-                                element={<RoleFeaturePage title="Marks" />}
+                                element={<ParentRecordsPage type="grades" />}
                             />
                         </Route>
                     </Route>

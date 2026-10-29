@@ -14,7 +14,8 @@ This is an in-progress application. The core app shell and several academic work
 - Admin account management: create, list, edit, and delete accounts with server-side pagination and email search; safe response projections omit password hashes. Public registration is disabled.
 - Admin subject management and teaching assignments: create, list, edit, delete subjects; assign teachers, classes, and subjects; view and remove assignments.
 - Teacher dashboard and assigned teaching list; class workspace with enrolled students, assignment creation, and attendance entry.
-- Student dashboard and assignment list/detail/submission workflow, including resubmission until grading.
+- Student dashboard, assignment list/detail/submission workflow, and final grade/feedback view.
+- Teacher submission review, return-for-revision workflow, and final grading for teacher-owned assignments.
 - Parent dashboard, linked-child selector, attendance, and assignment views. Parent access is limited to administrator-verified parent-student links.
 - Admin parent-link workflow for verifying and revoking relationships.
 - PostgreSQL schema and Drizzle migration history for users, classes, enrollments, parent links, subjects, teacher assignments, assignments, attendance, and submissions.
@@ -27,7 +28,7 @@ This is an in-progress application. The core app shell and several academic work
 - Grading, feedback, reporting, announcements, messaging, and notifications.
 - Production deployment configuration and automated tests.
 
-Routes that currently render the shared “coming soon” feature page are placeholders, not completed workflows. Parent grade views are intentionally deferred until the teacher grading workflow exists.
+Routes that currently render the shared “coming soon” feature page are placeholders, not completed workflows. The marks route now shows final grades for students and verified parents; grade correction and reopening remain deferred until an audited correction flow is designed.
 
 ## Architecture
 
@@ -212,6 +213,9 @@ All routes are mounted under `/api`. Protected endpoints expect `Authorization: 
 | `DELETE` | `/subjects/assignments/:id` | Admin | Remove a teaching assignment |
 | `GET` | `/subjects/my-assignments` | Teacher | List the signed-in teacher's assignments |
 | `GET` | `/teacher/dashboard` | Teacher | Teacher overview and classes |
+| `GET` | `/teacher/assignments` | Teacher | List assignments created by the signed-in teacher |
+| `GET` | `/teacher/assignments/:assignmentId/submissions` | Assignment owner | List student work for an owned assignment |
+| `PUT` | `/teacher/submissions/:submissionId/grade` | Assignment owner | Grade or return a submission with validated feedback |
 | `GET` | `/teacher/classes/:classId` | Assigned teacher | Class details and attendance for a date |
 | `POST` | `/teacher/assignments` | Assigned teacher | Publish an assignment to a class |
 | `PUT` | `/teacher/classes/:classId/attendance` | Assigned teacher | Record attendance entries |
@@ -221,12 +225,14 @@ All routes are mounted under `/api`. Protected endpoints expect `Authorization: 
 | `GET` | `/student/assignments` | Student | List enrolled-class assignments with submission status |
 | `GET` | `/student/assignments/:assignmentId` | Enrolled student | Load assignment details and the signed-in student submission |
 | `POST` | `/student/assignments/:assignmentId/submissions` | Enrolled student | Submit or resubmit text content (maximum 10,000 characters) |
+| `GET` | `/student/grades` | Student | Read only the signed-in student's final graded marks and feedback |
 | `GET` | `/parent/children` | Parent | List only students linked to the signed-in parent |
 | `GET` | `/parent/dashboard?childId=` | Parent | Read a linked child's attendance summary, classes, and recent assignments; defaults to the first linked child |
 | `GET` | `/parent/attendance?childId=` | Parent | Read attendance history for a linked child |
 | `GET` | `/parent/assignments?childId=` | Parent | Read published assignment details and submitted/not-submitted state for a linked child |
+| `GET` | `/parent/grades?childId=` | Verified parent | Read final grades and feedback for a linked child |
 
-The student assignment detail screen shows the due date, current submission state, and any marks/feedback. Students may submit late work and edit/resubmit until the work is graded; graded submissions are locked. Resubmission updates the existing row and resets its grading fields. Text submissions are limited to 10,000 characters. The backend has no logout endpoint; logout is currently client-side token removal. Submission uploads and the teacher grading workflow are not implemented.
+Students may submit late work; the app records the submitted time and applies no automatic late penalty. Students can edit work in `SUBMITTED` or `RETURNED` state, and resubmission clears prior review fields. A teacher can move `SUBMITTED` work to `GRADED` or `RETURNED`; returned work can be resubmitted or finalized as graded. Marks are whole numbers from 0 to 100. `RETURNED` requires feedback; feedback is limited to 2,000 characters. Final `GRADED` submissions are immutable: grade changes require a future audited correction/reopen workflow. Text submissions are limited to 10,000 characters. The backend has no logout endpoint; logout is currently client-side token removal. Submission uploads are not implemented.
 
 ## Data model
 
@@ -273,13 +279,13 @@ Implement each workflow vertically: schema/migration, API contract and validatio
 3. Parent APIs derive the parent account ID from the JWT. Every child-specific API checks the link and the student's current `STUDENT` role; unlinked child IDs return `404`.
 4. Added admin parent-link management and parent dashboard, child selector, attendance history, and assignment list. Assignment views expose due date and submitted/not-submitted state only; marks, feedback, and submission content remain out of scope until grading is implemented.
 
-### Phase 5 — Grading and assessment
+### Phase 5 — Grading and assessment (implemented)
 
-1. Add teacher endpoints to list submissions for assigned classes and assignments.
-2. Add validation for grade range, feedback length, submission state transitions, and teacher ownership of the assignment.
-3. Implement the teacher review screen and persist marks/feedback/status in `submissions`.
-4. Add student and linked-parent grade views, with access scoped to the signed-in user or verified relationship.
-5. Decide and document late-work, resubmission, and grade-change policies before baking them into UI behavior.
+1. Added teacher endpoints to list teacher-owned assignments and the submissions for each assignment. The review API exposes student work only to the teacher recorded as the assignment owner.
+2. Grade requests validate the status transition, integer mark range (0–100), feedback length (2,000 characters), and required revision feedback. Final grades cannot be changed or silently reopened.
+3. Added teacher assignment review screens to inspect text submissions, return work with feedback, and persist final marks and feedback. Student resubmission and teacher review lock the assignment row in transactions so the two actions cannot race.
+4. Added student and verified-parent grade views. Student queries derive student ID from the session; parent queries require an active verified parent/student link and return final graded data only.
+5. Policy: late submissions are accepted with no automatic penalty and preserve their submission timestamp. Students may resubmit while work is `SUBMITTED` or `RETURNED`; resubmission resets review fields. Teachers may grade submitted/returned work or return it for revisions. `GRADED` is terminal; grade corrections need a future audited correction/reopen flow.
 
 ### Phase 6 — Communication and reporting
 

@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { AuthenticatedRequest } from "../../middleware/auth.middleware.js";
 import { authenticate } from "../../middleware/auth.middleware.js";
 import { authorizeRoles } from "../../middleware/role.middleware.js";
-import { getParentAssignments, getParentAttendance, getParentChildren, getParentDashboard } from "./parent.service.js";
+import { getParentAssignments, getParentAttendance, getParentChildren, getParentDashboard, getParentGrades } from "./parent.service.js";
 
 const router = Router();
 const childIdQuery = z.object({ childId: z.string().uuid() });
@@ -54,6 +54,19 @@ router.get("/assignments", async (req: AuthenticatedRequest, res) => {
     } catch (error) {
         console.error("Load parent assignments error:", error);
         return res.status(500).json({ message: "Could not load assignments" });
+    }
+});
+
+router.get("/grades", async (req: AuthenticatedRequest, res) => {
+    const parsed = childIdQuery.safeParse(req.query);
+    if (!parsed.success) return res.status(400).json({ message: "A valid childId is required" });
+    try {
+        const result = await getParentGrades(req.user!.userId, parsed.data.childId);
+        if (!result) return res.status(404).json({ message: "That student is not linked to your parent account" });
+        return res.json(result);
+    } catch (error) {
+        console.error("Load parent grades error:", error);
+        return res.status(500).json({ message: "Could not load grades" });
     }
 });
 

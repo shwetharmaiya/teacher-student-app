@@ -96,20 +96,26 @@ export async function submitAssignment(
     assignmentId: string,
     content: string,
 ) {
-    const assignment = await getStudentAssignmentDetails(studentId, assignmentId);
-    if (!assignment) {
-        throw new Error("Assignment not found or you are not enrolled in this class");
-    }
+    return db.transaction(async (tx) => {
+        const [assignment] = await tx.select({ id: assignments.id, classId: assignments.classId }).from(assignments)
+            .where(eq(assignments.id, assignmentId)).for("update").limit(1);
+        if (!assignment) throw new Error("Assignment not found or you are not enrolled in this class");
 
-    if (assignment.submission?.status === "GRADED") {
-        throw new Error("This submission has been graded and can no longer be changed");
-    }
+        const [studentEnrollment] = await tx.select({ id: classEnrollments.id }).from(classEnrollments)
+            .where(and(eq(classEnrollments.classId, assignment.classId), eq(classEnrollments.studentId, studentId)))
+            .limit(1);
+        if (!studentEnrollment) throw new Error("Assignment not found or you are not enrolled in this class");
 
-    const now = new Date();
-    if (assignment.submission?.id) {
-        const [updatedSubmission] = await db
-            .update(submissions)
-            .set({
+        const [existing] = await tx.select({ id: submissions.id, status: submissions.status }).from(submissions)
+            .where(and(eq(submissions.assignmentId, assignmentId), eq(submissions.studentId, studentId)))
+            .for("update").limit(1);
+        if (existing?.status === "GRADED") {
+            throw new Error("This submission has been graded and can no longer be changed");
+        }
+
+        const now = new Date();
+        if (existing) {
+            const [updatedSubmission] = await tx.update(submissions).set({
                 content,
                 submittedAt: now,
                 status: "SUBMITTED",
@@ -118,26 +124,21 @@ export async function submitAssignment(
                 gradedAt: null,
                 gradedBy: null,
                 updatedAt: now,
-            })
-            .where(eq(submissions.id, assignment.submission.id))
-            .returning({
+            }).where(eq(submissions.id, existing.id)).returning({
                 id: submissions.id,
                 content: submissions.content,
                 status: submissions.status,
                 submittedAt: submissions.submittedAt,
             });
-        return { submission: updatedSubmission, resubmitted: true };
-    }
+            return { submission: updatedSubmission, resubmitted: true };
+        }
 
-    const [newSubmission] = await db
-        .insert(submissions)
-        .values({ assignmentId, studentId, content })
-        .returning({
+        const [newSubmission] = await tx.insert(submissions).values({ assignmentId, studentId, content }).returning({
             id: submissions.id,
             content: submissions.content,
             status: submissions.status,
             submittedAt: submissions.submittedAt,
         });
-
-    return { submission: newSubmission, resubmitted: false };
+        return { submission: newSubmission, resubmitted: false };
+    });
 }

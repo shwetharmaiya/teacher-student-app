@@ -1759,6 +1759,8 @@ a { color: inherit; }
 .student-attendance-status.present { background: #dcfce7; color: #166534; }
 .student-attendance-status.late { background: #fef3c7; color: #92400e; }
 .student-attendance-status.absent { background: #fee2e2; color: #991b1b; }
+.student-attendance-status.graded { background: #dcfce7; color: #166534; }
+.student-attendance-status.returned { background: #fef3c7; color: #92400e; }
 
 .parent-link-form-card {
     padding: 22px;
@@ -1833,6 +1835,117 @@ a { color: inherit; }
 
 .parent-assignment-meta strong {
     color: #0f172a;
+}
+
+.teacher-review-page > h2,
+.teacher-review-page > .page-intro {
+    margin-top: 0;
+}
+
+.teacher-submission-list {
+    display: grid;
+    gap: 16px;
+}
+
+.teacher-submission-card {
+    padding: 22px;
+}
+
+.teacher-submission-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.teacher-submission-heading h3 {
+    margin: 0 0 5px;
+}
+
+.teacher-submission-heading > div > span,
+.teacher-locked-grade > span {
+    color: #64748b;
+    font-size: 13px;
+}
+
+.teacher-submission-content {
+    margin: 18px 0;
+    padding: 16px;
+    border-radius: 10px;
+    background: #f8fafc;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.teacher-review-form {
+    display: grid;
+    gap: 14px;
+}
+
+.teacher-review-form input,
+.teacher-review-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    font: inherit;
+}
+
+.teacher-review-form textarea {
+    resize: vertical;
+}
+
+.teacher-review-form label {
+    display: grid;
+    gap: 6px;
+    font-weight: 600;
+}
+
+.teacher-review-form label > span {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 400;
+    text-align: right;
+}
+
+.teacher-locked-grade {
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+    border-radius: 10px;
+    background: #f1f5f9;
+}
+
+.teacher-locked-grade p {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.grade-feedback {
+    margin: 12px 0 0;
+    padding-left: 14px;
+    border-left: 3px solid #cbd5e1;
+    color: #475569;
+}
+
+.grade-score {
+    display: grid;
+    justify-items: end;
+    gap: 5px;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+.grade-score strong {
+    color: #0f172a;
+    font-size: 28px;
+}
+
+.grade-score small {
+    color: #64748b;
+    font-size: 14px;
 }
 
 @media (max-width: 650px) {
