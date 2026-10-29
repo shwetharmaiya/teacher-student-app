@@ -4,7 +4,7 @@ A role-based school management application with a React and TypeScript frontend,
 
 ## Project status
 
-This is an in-progress application. Phases 1 through 6 are implemented, including scoped announcements, in-app notifications, attendance and grade reports, and audit events. Deployment hardening and automated tests remain planned.
+This is an in-progress application. Phases 1 through 7 are implemented, including scoped announcements, in-app notifications, attendance and grade reports, audit events, automated API/UI coverage, and release-readiness checks. Production deployment configuration still needs to be completed for the target hosting environment.
 
 ### Implemented
 
@@ -27,7 +27,7 @@ This is an in-progress application. Phases 1 through 6 are implemented, includin
 
 ### Still in progress
 
-- Production deployment configuration and automated tests.
+- Production deployment configuration for the selected hosting provider, including managed secrets, database operations, monitoring, and a verified backup/restore exercise.
 
 Routes that currently render the shared “coming soon” feature page are placeholders, not completed workflows. The marks route now shows final grades for students and verified parents; grade correction and reopening remain deferred until an audited correction flow is designed.
 
@@ -99,7 +99,35 @@ users (actor) ──< audit_logs
 
 The role is stored on `users`; enrollments link student accounts to classes; parent links connect parent accounts to student accounts after administrator verification; teacher assignments link teachers, classes, and subjects; assignments belong to a class and teacher; submissions and attendance records belong to a student and class/assignment.
 
-The frontend lives in `frontend/`, the API in `backend/`, and the schema/migrations in `backend/src/db/schema.ts` and `backend/drizzle/`. There is no root package manifest; install and run each app from its own directory.
+The frontend lives in `frontend/`, the API in `backend/`, and the schema/migrations in `backend/src/db/schema.ts` and `backend/drizzle/`. Drizzle reads the TypeScript schema from `backend/src/db/`; the `backend/drizzle/` directory is reserved for reviewed SQL migrations and their metadata. Install and run each app from its own directory.
+
+### Repository map
+
+```text
+.
+├── .github/workflows/       # CI validation pipeline
+├── backend/
+│   ├── drizzle/             # Reviewed SQL migrations and Drizzle metadata
+│   ├── src/
+│   │   ├── db/              # Database client and canonical schema
+│   │   ├── middleware/      # Authentication, role, and request middleware
+│   │   ├── modules/         # Feature APIs and services by domain
+│   │   ├── routes/          # Shared workflow routes
+│   │   ├── services/        # Reusable workflow services
+│   │   └── app.ts, server.ts
+│   └── test/                # API and configuration tests
+├── frontend/
+│   ├── src/
+│   │   ├── app/             # Router and app-level providers
+│   │   ├── auth/            # Session state and route guards
+│   │   ├── components/      # Shared interface components
+│   │   ├── pages/           # Role-oriented screens
+│   │   └── services/        # API client and browser integrations
+│   └── tests/               # UI smoke tests
+└── README.md
+```
+
+`package-lock.json` files are kept per application, matching their independent dependency and install lifecycles. Build output, dependencies, coverage, local environment files, and editor/OS artifacts are ignored by Git.
 ## Requirements
 
 - Node.js and npm
@@ -187,7 +215,7 @@ npm test
 Remove-Item Env:DATABASE_URL, Env:TEST_DATABASE_URL
 ```
 
-The API suite creates uniquely named accounts/classes, exercises login, authorization, class ownership, enrollment, attendance, assignment ownership/enrollment, and parent-child scoping, then removes its fixtures. Frontend `npm test` runs server-rendered screen smoke checks for announcements and reports. GitHub Actions runs both test commands, applies migrations on a disposable PostgreSQL service, and builds both applications.
+The API suite creates uniquely named accounts/classes, covers workflows from Phases 1–7, and removes its fixtures. It checks assignment detail, content limits, resubmission and late work; account and subject administration; class ownership, enrollment, and capacity; attendance ownership, atomic roster saves, and student identity; parent linking/revocation and child scoping; grade validation, return/resubmit/finalize transitions and grade views; announcement visibility, notification ownership, report filters/totals, and audit events. Frontend `npm test` smoke-renders login, student assignment/class/attendance/grade pages, teacher class/review/workspace pages, parent attendance/assignment/grade tabs, admin user/link pages, announcements, reports, and protected-route restoration. GitHub Actions runs both test commands, applies migrations on a disposable PostgreSQL service, and builds both applications.
 
 ## First use
 
@@ -329,7 +357,7 @@ Implement each workflow vertically: schema/migration, API contract and validatio
 
 ### Phase 7 — Release readiness
 
-1. Added PostgreSQL-backed API integration coverage for login, disabled public registration, role denial, teacher class ownership, student-only enrollment, capacity, attendance roster ownership, assignment ownership/enrollment, and linked-parent scoping. Added configuration validation tests and UI smoke tests for the announcement and report screens.
+1. Added PostgreSQL-backed API integration coverage across assignment, administration, enrollment, attendance, parent-link, grading, announcement, notification, reporting, and audit flows. Added configuration validation tests and role-specific frontend screen smoke tests. The integration suite runs only against an explicitly configured test database.
 2. Added exact-origin CORS allowlisting, request IDs and structured request logs, baseline security headers, a 1 MB JSON body limit, a global 404/error response, auth endpoint rate limits, and graceful HTTP/database-pool shutdown on SIGINT/SIGTERM.
 3. Startup validates PostgreSQL URL, a 32-character minimum JWT secret, allowed frontend origins, port, and HTTPS origins in production. Public registration remains disabled and first-admin bootstrap remains a deliberate one-time path. Login/bootstrap are limited to 20 attempts per IP per 15 minutes in a single process. Tokens remain in browser `localStorage`; use HTTPS and consider HttpOnly secure cookies before production if the authentication architecture is upgraded.
 4. Added GitHub Actions with disposable PostgreSQL, migration application, backend tests/build, frontend tests/build, and lint. Backup, restore, and rollback steps are documented below.

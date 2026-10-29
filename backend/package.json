@@ -1,7 +1,6 @@
 {
-    "name": "backend",
+    "name": "teacher-student-api",
     "version": "1.0.0",
-    "main": "index.js",
     "type": "module",
     "scripts": {
         "dev": "tsx watch src/server.ts",
@@ -12,10 +11,8 @@
         "db:migrate": "drizzle-kit migrate",
         "db:push": "drizzle-kit push"
     },
-    "keywords": [],
-    "author": "",
-    "license": "ISC",
-    "description": "",
+    "description": "REST API for the Teacher–Student school management application",
+    "private": true,
     "dependencies": {
         "bcrypt": "^6.0.0",
         "cors": "^2.8.6",

@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { createServer } from "vite";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -17,6 +17,15 @@ before(async () => {
 after(async () => {
     await vite?.close();
 });
+
+async function renderPage(modulePath, { props = {}, initialEntry = "/", routePath = "*" } = {}) {
+    const { default: Page } = await vite.ssrLoadModule(modulePath);
+    return renderToStaticMarkup(React.createElement(
+        MemoryRouter,
+        { initialEntries: [initialEntry] },
+        React.createElement(Routes, null, React.createElement(Route, { path: routePath, element: React.createElement(Page, props) })),
+    ));
+}
 
 test("admin announcements screen renders publishing controls and a loading state", async () => {
     const { default: AnnouncementsPage } = await vite.ssrLoadModule("/src/pages/AnnouncementsPage.tsx");
@@ -84,4 +93,53 @@ test("protected routes wait for session restoration before redirecting", async (
     assert.match(html, /Restoring your session/);
     assert.doesNotMatch(html, /Protected content/);
     delete globalThis.localStorage;
+});
+
+test("student assignment list and detail flows render loading and submission UI states", async () => {
+    const list = await renderPage("/src/pages/student/StudentAssignmentsPage.tsx", { initialEntry: "/student/assignments" });
+    assert.match(list, /My Assignments/);
+    assert.match(list, /Loading assignments/);
+    const detail = await renderPage("/src/pages/student/StudentAssignmentDetailsPage.tsx", { initialEntry: "/student/assignments/assignment-1", routePath: "/student/assignments/:assignmentId" });
+    assert.match(detail, /Loading assignment/);
+});
+
+test("student classes, attendance, and grade screens render their initial states", async () => {
+    const cases = [
+        ["/src/pages/student/StudentClassesPage.tsx", /My classes/],
+        ["/src/pages/student/StudentAttendancePage.tsx", /My attendance/],
+        ["/src/pages/student/StudentGradesPage.tsx", /My grades/],
+    ];
+    for (const [modulePath, expected] of cases) {
+        const html = await renderPage(modulePath);
+        assert.match(html, expected, modulePath);
+        assert.match(html, /Loading/);
+    }
+});
+
+test("teacher classes, assignment review, and class workspace screens render without crashing", async () => {
+    const classes = await renderPage("/src/pages/teacher/TeacherClassesPage.tsx");
+    assert.match(classes, /My classes/);
+    assert.match(classes, /Loading your classes/);
+    const review = await renderPage("/src/pages/teacher/TeacherSubmissionsPage.tsx");
+    assert.match(review, /Assignment review/);
+    assert.match(review, /Loading assignments/);
+    const workspace = await renderPage("/src/pages/teacher/TeacherClassWorkspacePage.tsx", { initialEntry: "/teacher/classes/class-1?subjectId=subject-1", routePath: "/teacher/classes/:classId" });
+    assert.match(workspace, /Loading class workspace/);
+});
+
+test("admin account and parent-link screens render their management forms", async () => {
+    const users = await renderPage("/src/pages/admin/UsersPage.tsx");
+    assert.match(users, /User accounts/);
+    assert.match(users, /Loading accounts/);
+    const links = await renderPage("/src/pages/admin/ParentLinksPage.tsx");
+    assert.match(links, /Parent links/);
+    assert.match(links, /Verify and link accounts/);
+});
+
+test("parent attendance, assignment, and grade views render for every tab", async () => {
+    for (const [type, heading] of [["attendance", /Attendance/], ["assignments", /Assignments/], ["grades", /Grades/]]) {
+        const html = await renderPage("/src/pages/parent/ParentRecordsPage.tsx", { props: { type }, initialEntry: "/parent/records" });
+        assert.match(html, heading);
+        assert.match(html, /Loading/);
+    }
 });
