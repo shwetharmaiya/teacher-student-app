@@ -1,14 +1,8 @@
+import type { ParentChild, ParentDashboardData } from "../../types/ParentDashboard.ts";
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { apiFetch } from "../../services/api/client";
 
-type ParentChild = { id: string; email: string; classes: Array<{ id: string; grade: string; section: string; room: string; teacherName: string | null }> };
-type ParentDashboardData = {
-  children: ParentChild[];
-  selectedChild: { id: string; email: string } | null;
-  attendance: { recorded: number; present: number; absent: number; late: number; percentage: number | null } | null;
-  assignments: Array<{ id: string; title: string; dueAt: string; grade: string; section: string; submittedAt: string | null }>;
-};
 
 export default function ParentDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();

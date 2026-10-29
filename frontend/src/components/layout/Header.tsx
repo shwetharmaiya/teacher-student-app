@@ -1,4 +1,4 @@
-import type { User } from "../../auth/AuthContext";
+import type { User } from "../../types/AuthContext";
 import UserMenu from "./UserMenu";
 
 export default function Header({ user }: { user: User }) {

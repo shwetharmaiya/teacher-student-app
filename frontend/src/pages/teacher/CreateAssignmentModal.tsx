@@ -1,20 +1,8 @@
+import type { CreateAssignmentModalProps, Assignment } from "../../types/CreateAssignmentModal.ts";
 import { useState } from "react";
 import { apiFetch } from "../../services/api/client";
 
-type CreateAssignmentModalProps = {
-    classId: string;
-    onClose: () => void;
-    onCreated: (assignment: Assignment) => void;
-};
 
-export type Assignment = {
-    id: string;
-    classId: string;
-    teacherId: string;
-    title: string;
-    dueAt: string;
-    createdAt: string;
-};
 
 export default function CreateAssignmentModal({
     classId,

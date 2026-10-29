@@ -1,12 +1,7 @@
+import type { StudentClass, AttendanceRecord, AttendanceResponse } from "../../types/StudentAttendancePage.ts";
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "../../services/api/client";
 
-type StudentClass = { id: string; grade: string; section: string; teacherName: string | null; room: string };
-type AttendanceRecord = { id: string; classId: string; grade: string; section: string; attendanceDate: string; status: "PRESENT" | "ABSENT" | "LATE" };
-type AttendanceResponse = {
-    records: AttendanceRecord[];
-    summary: { recorded: number; present: number; absent: number; late: number; percentage: number | null };
-};
 
 export default function StudentAttendancePage() {
     const [classes, setClasses] = useState<StudentClass[]>([]);

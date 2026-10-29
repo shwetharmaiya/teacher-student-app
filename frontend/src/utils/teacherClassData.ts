@@ -1,14 +1,6 @@
-export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE";
+import type { AttendanceStatus, TeacherClassDetailsResponse, TeacherClassDetails } from "../types/teacherClassData.ts";
 
-export type TeacherClassDetailsResponse = {
-    class: { id: string; grade: string; section: string; room: string; students: number };
-    students: Array<{ id: string; email: string }>;
-    attendance: Array<{ studentId: string; status: AttendanceStatus }>;
-};
 
-export type TeacherClassDetails = Omit<TeacherClassDetailsResponse["class"], "students"> & {
-    students: Array<{ id: string; email: string; attendanceStatus: AttendanceStatus | null }>;
-};
 
 export function mapTeacherClassDetails(response: TeacherClassDetailsResponse): TeacherClassDetails {
     const attendanceByStudent = new Map(response.attendance.map(({ studentId, status }) => [studentId, status]));

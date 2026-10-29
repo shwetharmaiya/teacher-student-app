@@ -1,9 +1,9 @@
+import type { Notification } from "../types/NotificationsPage.ts";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiFetch } from "../services/api/client";
 import { useAuth } from "../auth/AuthContext";
 
-type Notification = { id: string; eventType: "ANNOUNCEMENT_PUBLISHED" | "SUBMISSION_GRADED" | "SUBMISSION_RETURNED"; title: string; body: string; href: string; entityId: string; readAt: string | null; createdAt: string };
 
 export default function NotificationsPage() {
     const { user } = useAuth();

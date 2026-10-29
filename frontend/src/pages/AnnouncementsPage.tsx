@@ -1,9 +1,8 @@
+import type { ClassOption, Announcement } from "../types/AnnouncementsPage.ts";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { apiFetch } from "../services/api/client";
-import type { UserRole } from "../auth/AuthContext";
+import type { UserRole } from "../types/AuthContext";
 
-type ClassOption = { id: string; grade: string; section: string };
-type Announcement = { id: string; authorEmail: string; audience: "SCHOOL" | "CLASS"; classId: string | null; grade: string | null; section: string | null; title: string; body: string; publishedAt: string };
 
 export default function AnnouncementsPage({ role }: { role: UserRole }) {
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);

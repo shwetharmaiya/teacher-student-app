@@ -1,9 +1,7 @@
+import type { StudentClass, StudentAssignment, StudentDashboardData } from "../../types/StudentDashboard.ts";
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../services/api/client";
 import { useNavigate } from "react-router-dom";
-type StudentClass = { id: string; grade: string; section: string; teacherName: string | null; room: string };
-type StudentAssignment = { id: string; title: string; dueAt: string; grade: string; section: string };
-type StudentDashboardData = { classes: StudentClass[]; assignments: StudentAssignment[]; attendance: { recorded: number; percentage: number | null } };
 
 export default function StudentDashboard() {
   const [dashboard, setDashboard] = useState<StudentDashboardData | null>(null);

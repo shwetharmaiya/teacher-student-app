@@ -1,8 +1,8 @@
+import type { Child } from "../../types/ParentChildrenPage.ts";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiFetch } from "../../services/api/client";
 
-type Child = { id: string; email: string; classes: Array<{ id: string; grade: string; section: string; room: string; teacherName: string | null }> };
 
 export default function ParentChildrenPage() {
     const [children, setChildren] = useState<Child[]>([]);

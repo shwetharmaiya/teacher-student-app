@@ -1,17 +1,9 @@
+import type { UserRole, ProtectedRouteProps } from "../types/ProtectedRoute.ts";
 import type { ReactNode } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
-type UserRole =
-    | "ADMIN"
-    | "TEACHER"
-    | "STUDENT"
-    | "PARENT";
 
-type ProtectedRouteProps = {
-    children?: ReactNode;
-    allowedRoles?: UserRole[];
-};
 
 export default function ProtectedRoute({
     children,

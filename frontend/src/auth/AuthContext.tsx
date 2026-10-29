@@ -1,3 +1,4 @@
+import type { UserRole, User, AuthContextValue, LoginResponse, MeResponse } from "../types/AuthContext.ts";
 import {
   createContext,
   useContext,
@@ -7,40 +8,14 @@ import {
 } from "react";
 import { apiFetch } from "../services/api/client";
 
-export type UserRole =
-  | "ADMIN"
-  | "TEACHER"
-  | "STUDENT"
-  | "PARENT";
 
-export interface User {
-  id: string;
-  email: string;
-  role: UserRole;
-  createdAt?: string;
-  updatedAt?: string;
-}
 
-interface AuthContextValue {
-  user: User | null;
-  token: string | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<User>;
-  logout: () => void;
-}
 
 const AuthContext = createContext<AuthContextValue | undefined>(
   undefined
 );
 
-interface LoginResponse {
-  token: string;
-  user: User;
-}
 
-interface MeResponse {
-  user: User;
-}
 
 export function AuthProvider({
   children,

@@ -1,10 +1,7 @@
+import type { UserRole, UserRecord, UserPage, UserForm } from "../../types/UsersPage.ts";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { apiFetch } from "../../services/api/client";
 
-type UserRole = "ADMIN" | "TEACHER" | "STUDENT" | "PARENT";
-type UserRecord = { id: string; email: string; role: UserRole; createdAt: string; updatedAt: string };
-type UserPage = { users: UserRecord[]; total: number; page: number; limit: number; totalPages: number };
-type UserForm = { email: string; password: string; role: UserRole };
 const emptyForm: UserForm = { email: "", password: "", role: "STUDENT" };
 const roleLabels: Record<UserRole, string> = { ADMIN: "Administrator", TEACHER: "Teacher", STUDENT: "Student", PARENT: "Parent" };
 

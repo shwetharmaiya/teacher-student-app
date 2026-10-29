@@ -1,3 +1,5 @@
+import type { RoleRouteProps } from "../types/RoleRoute.ts";
+import type { UserRole } from "../types/AuthContext.ts";
 import {
   Navigate,
   Outlet,
@@ -5,12 +7,8 @@ import {
 
 import {
   useAuth,
-  type UserRole,
 } from "./AuthContext";
 
-interface RoleRouteProps {
-  allowedRoles: UserRole[];
-}
 
 export default function RoleRoute({
   allowedRoles,

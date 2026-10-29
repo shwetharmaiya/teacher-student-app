@@ -1,0 +1,4 @@
+export type ClassOption = { id: string; grade: string; section: string };
+export type ChildOption = { id: string; email: string; classes: ClassOption[] };
+export type AttendanceReport = { records: Array<{ id: string; attendanceDate: string; status: string; grade: string; section: string; studentEmail: string }>; total: number; page: number; limit: number; summary: { recorded: number; present: number; absent: number; late: number; attended: number; percentage: number | null } };
+export type GradeReport = { records: Array<{ id: string; assignmentTitle: string; gradedAt: string | null; marks: number | null; feedback: string | null; grade: string; section: string; studentEmail: string }>; total: number; page: number; limit: number; summary: { graded: number; average: number | null; highest: number | null; lowest: number | null } };

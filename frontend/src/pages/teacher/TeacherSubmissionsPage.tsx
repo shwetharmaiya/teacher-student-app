@@ -1,20 +1,7 @@
+import type { Assignment, Submission, ReviewInput } from "../../types/TeacherSubmissionsPage.ts";
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "../../services/api/client";
 
-type Assignment = { id: string; title: string; dueAt: string; grade: string; section: string };
-type Submission = {
-    id: string;
-    studentId: string;
-    studentEmail: string;
-    content: string | null;
-    fileUrl: string | null;
-    submittedAt: string;
-    status: "SUBMITTED" | "RETURNED" | "GRADED";
-    marks: number | null;
-    feedback: string | null;
-    gradedAt: string | null;
-};
-type ReviewInput = { status: "GRADED"; marks: number; feedback?: string } | { status: "RETURNED"; feedback: string };
 
 function SubmissionCard({ submission, onReview }: { submission: Submission; onReview: (id: string, input: ReviewInput) => Promise<void> }) {
     const [marks, setMarks] = useState(submission.marks?.toString() ?? "");

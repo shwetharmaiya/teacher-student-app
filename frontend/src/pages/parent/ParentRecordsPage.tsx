@@ -1,15 +1,7 @@
+import type { Child, AttendanceData, AssignmentsData, GradesData, ParentRecordsResult } from "../../types/ParentRecordsPage.ts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { apiFetch } from "../../services/api/client";
-
-type Child = { id: string; email: string; classes: Array<{ id: string; grade: string; section: string }> };
-type AttendanceData = { child: { id: string; email: string }; records: Array<{ id: string; grade: string; section: string; attendanceDate: string; status: "PRESENT" | "ABSENT" | "LATE" }>; summary: { recorded: number; present: number; absent: number; late: number; percentage: number | null } };
-type AssignmentsData = { child: { id: string; email: string }; assignments: Array<{ id: string; title: string; description: string | null; dueAt: string; grade: string; section: string; submittedAt: string | null }> };
-type GradesData = { child: { id: string; email: string }; grades: Array<{ id: string; assignmentTitle: string; grade: string; section: string; submittedAt: string; marks: number | null; feedback: string | null; gradedAt: string | null }> };
-type ParentRecordsResult =
-    | { type: "attendance"; data: AttendanceData }
-    | { type: "assignments"; data: AssignmentsData }
-    | { type: "grades"; data: GradesData };
 
 export default function ParentRecordsPage({ type }: { type: "attendance" | "assignments" | "grades" }) {
     const [searchParams, setSearchParams] = useSearchParams();

@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { useAuth, type User } from "../../auth/AuthContext";
+import { useAuth } from "../../auth/AuthContext";
+import type { User } from "../../types/AuthContext";
 
 export default function UserMenu({ user }: { user: User }) {
   const { logout } = useAuth();

@@ -1,26 +1,9 @@
+import type { Submission, Assignment } from "../../types/StudentAssignmentDetailsPage.ts";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { apiFetch } from "../../services/api/client";
 
-type Submission = {
-    id: string;
-    content: string | null;
-    status: "SUBMITTED" | "GRADED" | "RETURNED";
-    submittedAt: string;
-    marks: number | null;
-    feedback: string | null;
-};
 
-type Assignment = {
-    id: string;
-    title: string;
-    description: string | null;
-    dueAt: string;
-    createdAt: string;
-    grade: string;
-    section: string;
-    submission: Submission | null;
-};
 
 const MAX_CONTENT_LENGTH = 10_000;
 

@@ -1,31 +1,10 @@
+import type { ClassRecord, ClassApiRecord, ClassForm, Person } from "../../types/ClassesPage.ts";
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "../../services/api/client";
 
-type ClassRecord = {
-  id: string;
-  grade: string;
-  section: string;
-  teacher: string;
-  teacherId: string | null;
-  room: string;
-  students: number;
-  capacity: number;
-};
 
-type ClassApiRecord = {
-  id: string;
-  grade: string;
-  section: string;
-  teacherName: string | null;
-  teacherId: string | null;
-  room: string;
-  studentCount: number;
-  capacity: number;
-};
 
-type ClassForm = Omit<ClassRecord, "id" | "students">;
 
-type Person = { id: string; email: string; role: "TEACHER" | "STUDENT" };
 
 const emptyForm: ClassForm = { grade: "Grade 1", section: "A", teacher: "", teacherId: null, room: "", capacity: 30 };
 

@@ -1,11 +1,9 @@
+import type { Account, ParentLink, Page } from "../../types/ParentLinksPage.ts";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { apiFetch } from "../../services/api/client";
 
-type Account = { id: string; email: string; role: "PARENT" | "STUDENT" };
-type ParentLink = { id: string; parentId: string; parentEmail: string; studentId: string; studentEmail: string; verifiedAt: string; createdAt: string };
 
 async function loadRoleAccounts(role: Account["role"]) {
-    type Page = { users: Account[]; totalPages: number };
     const firstPage = await apiFetch<Page>(`/admin/users?role=${role}&limit=100&page=1`);
     if (firstPage.totalPages <= 1) return firstPage.users;
     const remainingPages = await Promise.all(Array.from({ length: firstPage.totalPages - 1 }, (_, index) =>

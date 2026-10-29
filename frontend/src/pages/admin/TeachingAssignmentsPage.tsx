@@ -1,55 +1,14 @@
+import type { Person, SchoolClass, Subject, TeachingAssignment, PeopleResponse, ClassesResponse, SubjectsResponse, AssignmentsResponse } from "../../types/TeachingAssignmentsPage.ts";
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../services/api/client";
 
-type Person = {
-    id: string;
-    email: string;
-    role: "ADMIN" | "TEACHER" | "STUDENT" | "PARENT";
-};
 
-type SchoolClass = {
-    id: string;
-    grade: string;
-    section: string;
-    room: string;
-    capacity: number;
-    studentCount: number;
-};
 
-type Subject = {
-    id: string;
-    name: string;
-    code: string;
-};
 
-type TeachingAssignment = {
-    id: string;
-    teacherId: string;
-    teacherEmail: string;
-    classId: string;
-    grade: string;
-    section: string;
-    subjectId: string;
-    subjectName: string;
-    subjectCode: string;
-    createdAt: string;
-};
 
-type PeopleResponse = {
-    people: Person[];
-};
 
-type ClassesResponse = {
-    classes: SchoolClass[];
-};
 
-type SubjectsResponse = {
-    subjects: Subject[];
-};
 
-type AssignmentsResponse = {
-    assignments: TeachingAssignment[];
-};
 
 export default function TeachingAssignmentsPage() {
     const [teachers, setTeachers] = useState<Person[]>([]);

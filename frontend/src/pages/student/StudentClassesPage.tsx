@@ -1,7 +1,7 @@
+import type { StudentClass } from "../../types/StudentClassesPage.ts";
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../services/api/client";
 
-type StudentClass = { id: string; grade: string; section: string; teacherName: string | null; room: string };
 
 export default function StudentClassesPage() {
     const [classes, setClasses] = useState<StudentClass[]>([]);

@@ -1,0 +1,1 @@
+export type Notification = { id: string; eventType: "ANNOUNCEMENT_PUBLISHED" | "SUBMISSION_GRADED" | "SUBMISSION_RETURNED"; title: string; body: string; href: string; entityId: string; readAt: string | null; createdAt: string };

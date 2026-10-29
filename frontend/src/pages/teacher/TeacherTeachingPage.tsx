@@ -1,20 +1,9 @@
+import type { TeachingAssignment, MyAssignmentsResponse } from "../../types/TeacherTeachingPage.ts";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../services/api/client";
 
-type TeachingAssignment = {
-    id: string;
-    classId: string;
-    grade: string;
-    section: string;
-    subjectId: string;
-    subjectName: string;
-    subjectCode: string;
-};
 
-type MyAssignmentsResponse = {
-    assignments: TeachingAssignment[];
-};
 
 export default function TeacherTeachingPage() {
     const navigate = useNavigate();

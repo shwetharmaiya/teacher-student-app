@@ -1,8 +1,7 @@
+import type { Subject, SubjectForm } from "../../types/SubjectsPage.ts";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { apiFetch } from "../../services/api/client";
 
-type Subject = { id: string; name: string; code: string; createdAt: string; updatedAt: string };
-type SubjectForm = { name: string; code: string };
 const emptyForm: SubjectForm = { name: "", code: "" };
 
 export default function SubjectsPage() {

@@ -62,7 +62,7 @@ test("student reports screen renders the report filters and loading state", asyn
 test("login screen exposes credential fields and the administrator-provisioning policy", async () => {
     globalThis.localStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
     const [{ default: LoginPage }, { AuthProvider }] = await Promise.all([
-        vite.ssrLoadModule("/src/pages/Login/LoginPage.tsx"),
+        vite.ssrLoadModule("/src/pages/auth/LoginPage.tsx"),
         vite.ssrLoadModule("/src/auth/AuthContext.tsx"),
     ]);
     const html = renderToStaticMarkup(React.createElement(
@@ -77,7 +77,7 @@ test("login screen exposes credential fields and the administrator-provisioning 
 });
 
 test("teacher class response maps the roster array separately from the class student count", async () => {
-    const { mapTeacherClassDetails } = await vite.ssrLoadModule("/src/pages/teacher/teacherClassData.ts");
+    const { mapTeacherClassDetails } = await vite.ssrLoadModule("/src/utils/teacherClassData.ts");
     const details = mapTeacherClassDetails({
         class: { id: "class-1", grade: "7", section: "A", room: "12", students: 1 },
         students: [{ id: "student-1", email: "student@example.test" }],

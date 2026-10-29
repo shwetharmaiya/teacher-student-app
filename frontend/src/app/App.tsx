@@ -3,7 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "../auth/ProtectedRoute";
 import RoleRoute from "../auth/RoleRoute";
 
-import Login from "../pages/Login/LoginPage";
+import Login from "../pages/auth/LoginPage";
 import Unauthorized from "./../pages/Unauthorized";
 import Register from "./../pages/auth/Register";
 import UsersPage from "../pages/admin/UsersPage";

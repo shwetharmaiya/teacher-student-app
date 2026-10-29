@@ -1,56 +1,14 @@
+import type { TeachingAssignment, MyAssignmentsResponse, Student, ClassDetailsResponse, Assignment, AttendanceStatus, AttendanceMap } from "../../types/TeacherClassWorkspacePage.ts";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { apiFetch } from "../../services/api/client";
 import CreateAssignmentModal from "./CreateAssignmentModal";
 
-type TeachingAssignment = {
-    id: string;
-    classId: string;
-    grade: string;
-    section: string;
-    subjectId: string;
-    subjectName: string;
-    subjectCode: string;
-};
 
-type MyAssignmentsResponse = {
-    assignments: TeachingAssignment[];
-};
 
-type Student = {
-    id: string;
-    email: string;
-    role: "STUDENT";
-};
 
-type ClassDetailsResponse = {
-    class: {
-        id: string;
-        grade: string;
-        section: string;
-        room: string;
-        capacity: number;
-        students: number;
-    };
-    students: Student[];
-    assignments: Array<{
-        id: string;
-        title: string;
-        description?: string | null;
-        dueAt: string;
-        createdAt: string;
-    }>;
-    attendance: Array<{
-        studentId: string;
-        status: "PRESENT" | "ABSENT" | "LATE";
-    }>;
-    attendanceDate: string;
-};
 
-type Assignment = NonNullable<ClassDetailsResponse["assignments"]>[number];
-type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE";
 
-type AttendanceMap = Record<string, AttendanceStatus>;
 
 export default function TeacherClassWorkspacePage() {
     const [showCreateAssignment, setShowCreateAssignment] = useState(false);

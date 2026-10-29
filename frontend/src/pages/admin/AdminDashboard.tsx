@@ -1,18 +1,8 @@
+import type { DashboardSummary } from "../../types/AdminDashboard.ts";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiFetch } from "../../services/api/client";
 
-type DashboardSummary = {
-    totals: { students: number; teachers: number; classes: number; parents: number };
-    attendance: {
-        date: string;
-        recorded: number;
-        present: number;
-        late: number;
-        absent: number;
-        percentage: number | null;
-    };
-};
 
 export default function AdminDashboard() {
     const [summary, setSummary] = useState<DashboardSummary | null>(null);

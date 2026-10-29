@@ -1,8 +1,9 @@
+import type { TeacherClass } from "../../types/TeacherClassesPage.ts";
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../services/api/client";
-import { mapTeacherClassDetails, type AttendanceStatus, type TeacherClassDetails } from "./teacherClassData";
+import { mapTeacherClassDetails } from "../../utils/teacherClassData";
+import type { AttendanceStatus, TeacherClassDetails } from "../../types/teacherClassData";
 
-type TeacherClass = { id: string; grade: string; section: string; room: string; studentCount: number };
 
 const today = new Date().toISOString().slice(0, 10);
 

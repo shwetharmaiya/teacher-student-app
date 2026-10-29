@@ -1,5 +1,6 @@
 import { Navigate } from "react-router-dom";
-import { useAuth, type UserRole } from "./AuthContext";
+import { useAuth } from "./AuthContext";
+import type { UserRole } from "../types/AuthContext";
 
 const homeByRole: Record<UserRole, string> = {
   ADMIN: "/admin",

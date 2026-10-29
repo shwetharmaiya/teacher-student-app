@@ -1,24 +1,10 @@
+import type { Submission, Assignment, AssignmentsResponse } from "../../types/StudentAssignmentsPage.ts";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiFetch } from "../../services/api/client";
 
-type Submission = {
-    id: string;
-    status: "SUBMITTED" | "GRADED" | "RETURNED";
-    submittedAt: string;
-    marks: number | null;
-};
 
-type Assignment = {
-    id: string;
-    title: string;
-    dueAt: string;
-    grade: string;
-    section: string;
-    submission: Submission | null;
-};
 
-type AssignmentsResponse = { assignments: Assignment[] };
 
 function isOverdue(dueAt: string) {
     return new Date(dueAt).getTime() < Date.now();

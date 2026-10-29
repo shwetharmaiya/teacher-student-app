@@ -1,0 +1,1 @@
+export type GradeRecord = { id: string; assignmentTitle: string; dueAt: string; grade: string; section: string; submittedAt: string; marks: number | null; feedback: string | null; gradedAt: string | null };

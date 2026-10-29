@@ -1,7 +1,7 @@
+import type { GradeRecord } from "../../types/StudentGradesPage.ts";
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "../../services/api/client";
 
-type GradeRecord = { id: string; assignmentTitle: string; dueAt: string; grade: string; section: string; submittedAt: string; marks: number | null; feedback: string | null; gradedAt: string | null };
 
 export default function StudentGradesPage() {
     const [grades, setGrades] = useState<GradeRecord[]>([]);

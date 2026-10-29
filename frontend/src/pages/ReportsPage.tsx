@@ -1,11 +1,8 @@
+import type { ClassOption, ChildOption, AttendanceReport, GradeReport } from "../types/ReportsPage.ts";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiFetch } from "../services/api/client";
-import type { UserRole } from "../auth/AuthContext";
+import type { UserRole } from "../types/AuthContext";
 
-type ClassOption = { id: string; grade: string; section: string };
-type ChildOption = { id: string; email: string; classes: ClassOption[] };
-type AttendanceReport = { records: Array<{ id: string; attendanceDate: string; status: string; grade: string; section: string; studentEmail: string }>; total: number; page: number; limit: number; summary: { recorded: number; present: number; absent: number; late: number; attended: number; percentage: number | null } };
-type GradeReport = { records: Array<{ id: string; assignmentTitle: string; gradedAt: string | null; marks: number | null; feedback: string | null; grade: string; section: string; studentEmail: string }>; total: number; page: number; limit: number; summary: { graded: number; average: number | null; highest: number | null; lowest: number | null } };
 
 export default function ReportsPage({ role }: { role: UserRole }) {
     const [reportType, setReportType] = useState<"attendance" | "grades">("attendance");

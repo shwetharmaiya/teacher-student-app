@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import type { UserRole } from "../../auth/AuthContext";
+import type { UserRole } from "../../types/AuthContext";
 
 const navigation: Record<UserRole, { label: string; to: string }[]> = {
   ADMIN: [
