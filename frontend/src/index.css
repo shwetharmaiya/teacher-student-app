@@ -1948,6 +1948,144 @@ a { color: inherit; }
     font-size: 14px;
 }
 
+.announcement-compose {
+    padding: 22px;
+}
+
+.announcement-compose form {
+    display: grid;
+    gap: 14px;
+}
+
+.announcement-compose form > label {
+    display: grid;
+    gap: 6px;
+    font-weight: 600;
+}
+
+.announcement-compose input,
+.announcement-compose select,
+.announcement-compose textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: #fff;
+    font: inherit;
+}
+
+.announcement-compose textarea {
+    resize: vertical;
+}
+
+.announcement-list,
+.notification-list {
+    display: grid;
+    gap: 14px;
+}
+
+.announcement-card {
+    padding: 20px 22px;
+}
+
+.announcement-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.announcement-card h3 {
+    margin: 12px 0 8px;
+}
+
+.announcement-card > p {
+    margin: 0 0 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.announcement-author {
+    color: #64748b;
+    font-size: 12px;
+}
+
+.notification-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 18px 20px;
+    border-left: 4px solid transparent;
+}
+
+.notification-card.unread {
+    border-left-color: #2563eb;
+    background: #eff6ff;
+}
+
+.notification-copy h3 {
+    margin: 4px 0;
+}
+
+.notification-copy p {
+    margin: 0 0 6px;
+}
+
+.notification-copy time {
+    color: #64748b;
+    font-size: 12px;
+}
+
+.notification-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    white-space: nowrap;
+}
+
+.notification-actions a,
+.notification-actions button {
+    border: 0;
+    background: transparent;
+    color: #2563eb;
+    font: inherit;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.report-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 14px;
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.report-toolbar label {
+    display: grid;
+    gap: 6px;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.report-toolbar select,
+.report-toolbar input {
+    min-width: 150px;
+    padding: 9px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    font: inherit;
+}
+
 @media (max-width: 650px) {
     .admin-pagination {
         align-items: stretch;
@@ -1970,5 +2108,15 @@ a { color: inherit; }
 
     .parent-assignment-meta {
         justify-items: start;
+    }
+
+    .notification-card,
+    .announcement-meta {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .notification-actions {
+        flex-wrap: wrap;
     }
 }

@@ -8,8 +8,11 @@ import {
     uniqueIndex,
     text,
     index,
-    unique
+    unique,
+    check,
+    jsonb,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const userRoleEnum = pgEnum("user_role", [
     "ADMIN",
@@ -298,3 +301,55 @@ export const submissions = pgTable(
     ),
   })
 );
+
+export const announcementAudienceEnum = pgEnum("announcement_audience", ["SCHOOL", "CLASS"]);
+
+export const announcements = pgTable("announcements", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    authorId: uuid("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    audience: announcementAudienceEnum("audience").notNull(),
+    classId: uuid("class_id").references(() => classes.id, { onDelete: "cascade" }),
+    title: varchar("title", { length: 160 }).notNull(),
+    body: text("body").notNull(),
+    publishedAt: timestamp("published_at", { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    index("announcements_published_idx").on(table.publishedAt),
+    index("announcements_class_published_idx").on(table.classId, table.publishedAt),
+    check("announcement_audience_target_check", sql`(${table.audience} = 'SCHOOL' and ${table.classId} is null) or (${table.audience} = 'CLASS' and ${table.classId} is not null)`),
+]);
+
+export const notificationEventEnum = pgEnum("notification_event", [
+    "ANNOUNCEMENT_PUBLISHED",
+    "SUBMISSION_GRADED",
+    "SUBMISSION_RETURNED",
+]);
+
+export const notifications = pgTable("notifications", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    eventType: notificationEventEnum("event_type").notNull(),
+    title: varchar("title", { length: 160 }).notNull(),
+    body: varchar("body", { length: 500 }).notNull(),
+    href: varchar("href", { length: 512 }).notNull(),
+    entityId: uuid("entity_id").notNull(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    index("notifications_user_created_idx").on(table.userId, table.createdAt),
+    index("notifications_user_unread_idx").on(table.userId, table.readAt),
+]);
+
+export const auditLogs = pgTable("audit_logs", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    actorId: uuid("actor_id").references(() => users.id, { onDelete: "set null" }),
+    action: varchar("action", { length: 80 }).notNull(),
+    entityType: varchar("entity_type", { length: 64 }).notNull(),
+    entityId: uuid("entity_id"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    index("audit_logs_entity_idx").on(table.entityType, table.entityId, table.createdAt),
+    index("audit_logs_actor_idx").on(table.actorId, table.createdAt),
+]);

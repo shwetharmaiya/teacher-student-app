@@ -30,6 +30,9 @@ import ParentChildrenPage from "../pages/parent/ParentChildrenPage";
 import ParentRecordsPage from "../pages/parent/ParentRecordsPage";
 import StudentGradesPage from "../pages/student/StudentGradesPage";
 import TeacherSubmissionsPage from "../pages/teacher/TeacherSubmissionsPage";
+import AnnouncementsPage from "../pages/AnnouncementsPage";
+import NotificationsPage from "../pages/NotificationsPage";
+import ReportsPage from "../pages/ReportsPage";
 import "../index.css";
 
 export default function App() {
@@ -64,6 +67,9 @@ export default function App() {
                                 element={<TeachingAssignmentsPage />}
                             />
                             <Route path="/admin/parent-links" element={<ParentLinksPage />} />
+                            <Route path="/admin/announcements" element={<AnnouncementsPage role="ADMIN" />} />
+                            <Route path="/admin/reports" element={<ReportsPage role="ADMIN" />} />
+                            <Route path="/admin/notifications" element={<NotificationsPage />} />
                         </Route>
 
                         <Route
@@ -103,6 +109,9 @@ export default function App() {
                                 path="/teacher/classes/:classId"
                                 element={<TeacherClassWorkspacePage />}
                             />
+                            <Route path="/teacher/announcements" element={<AnnouncementsPage role="TEACHER" />} />
+                            <Route path="/teacher/reports" element={<ReportsPage role="TEACHER" />} />
+                            <Route path="/teacher/notifications" element={<NotificationsPage />} />
                         </Route>
 
                         <Route
@@ -120,6 +129,9 @@ export default function App() {
                             />
                             <Route path="/student/assignments" element={<StudentAssignmentsPage />} />
                             <Route path="/student/assignments/:assignmentId" element={<StudentAssignmentDetailsPage />} />
+                            <Route path="/student/announcements" element={<AnnouncementsPage role="STUDENT" />} />
+                            <Route path="/student/reports" element={<ReportsPage role="STUDENT" />} />
+                            <Route path="/student/notifications" element={<NotificationsPage />} />
                             <Route
                                 path="/student/classes"
                                 element={<StudentClassesPage />}
@@ -162,6 +174,9 @@ export default function App() {
                                 path="/parent/marks"
                                 element={<ParentRecordsPage type="grades" />}
                             />
+                            <Route path="/parent/announcements" element={<AnnouncementsPage role="PARENT" />} />
+                            <Route path="/parent/reports" element={<ReportsPage role="PARENT" />} />
+                            <Route path="/parent/notifications" element={<NotificationsPage />} />
                         </Route>
                     </Route>
                 </Route>

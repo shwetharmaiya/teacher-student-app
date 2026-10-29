@@ -47,7 +47,7 @@ router.post("/", async (req, res) => {
     const parsed = createSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.issues[0]?.message ?? "Invalid user" });
     try {
-        const user = await createManagedUser(parsed.data);
+        const user = await createManagedUser(parsed.data, req.user!.userId);
         if (!user) return res.status(409).json({ message: "An account with this email already exists" });
         return res.status(201).json({ user });
     } catch (error) {

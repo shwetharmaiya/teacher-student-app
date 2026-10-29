@@ -8,6 +8,9 @@ const navigation: Record<UserRole, { label: string; to: string }[]> = {
     { label: "Classes", to: "/admin/classes" },
     { label: "Subjects", to: "/admin/subjects" },
     { label: "Parent links", to: "/admin/parent-links" },
+    { label: "Announcements", to: "/admin/announcements" },
+    { label: "Reports", to: "/admin/reports" },
+    { label: "Notifications", to: "/admin/notifications" },
   ],
   TEACHER: [
     { label: "Dashboard", to: "/teacher" },
@@ -16,6 +19,9 @@ const navigation: Record<UserRole, { label: string; to: string }[]> = {
     { label: "Attendance", to: "/teacher/attendance" },
     { label: "Assignments", to: "/teacher/assignments" },
     { label: "Marks", to: "/teacher/marks" },
+    { label: "Announcements", to: "/teacher/announcements" },
+    { label: "Reports", to: "/teacher/reports" },
+    { label: "Notifications", to: "/teacher/notifications" },
   ],
   STUDENT: [
     { label: "Dashboard", to: "/student/dashboard" },
@@ -23,6 +29,9 @@ const navigation: Record<UserRole, { label: string; to: string }[]> = {
     { label: "Assignments", to: "/student/assignments" },
     { label: "Marks", to: "/student/marks" },
     { label: "Attendance", to: "/student/attendance" },
+    { label: "Announcements", to: "/student/announcements" },
+    { label: "Reports", to: "/student/reports" },
+    { label: "Notifications", to: "/student/notifications" },
   ],
   PARENT: [
     { label: "Dashboard", to: "/parent/dashboard" },
@@ -30,6 +39,9 @@ const navigation: Record<UserRole, { label: string; to: string }[]> = {
     { label: "Attendance", to: "/parent/attendance" },
     { label: "Assignments", to: "/parent/assignments" },
     { label: "Marks", to: "/parent/marks" },
+    { label: "Announcements", to: "/parent/announcements" },
+    { label: "Reports", to: "/parent/reports" },
+    { label: "Notifications", to: "/parent/notifications" },
   ],
 };
 

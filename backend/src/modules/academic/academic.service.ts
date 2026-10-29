@@ -2,6 +2,7 @@ import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import {
     assignments,
+    auditLogs,
     attendanceRecords,
     classEnrollments,
     classes,
@@ -314,10 +315,24 @@ export async function recordAttendance(input: {
             attendanceDate: input.attendanceDate,
             status: entry.status,
         }));
-        return tx.insert(attendanceRecords).values(records).onConflictDoUpdate({
+        const saved = await tx.insert(attendanceRecords).values(records).onConflictDoUpdate({
             target: [attendanceRecords.classId, attendanceRecords.studentId, attendanceRecords.attendanceDate],
             set: { status: sql`excluded.status` },
         }).returning();
+        await tx.insert(auditLogs).values({
+            actorId: input.teacherId,
+            action: "ATTENDANCE_ROSTER_SAVED",
+            entityType: "CLASS",
+            entityId: input.classId,
+            metadata: {
+                attendanceDate: input.attendanceDate,
+                recordCount: saved.length,
+                present: records.filter((record) => record.status === "PRESENT").length,
+                absent: records.filter((record) => record.status === "ABSENT").length,
+                late: records.filter((record) => record.status === "LATE").length,
+            },
+        });
+        return saved;
     });
 }
 

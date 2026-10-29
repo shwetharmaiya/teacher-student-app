@@ -43,6 +43,13 @@
       "when": 1793190812994,
       "tag": "0005_gigantic_network",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793256114671,
+      "tag": "0006_ancient_blockbuster",
+      "breakpoints": true
     }
   ]
 }

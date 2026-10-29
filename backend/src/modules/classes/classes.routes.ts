@@ -49,7 +49,7 @@ router.post("/:id/enrollments", async (req, res) => {
     try {
         const classId = z.string().uuid().parse(req.params.id);
         const studentId = z.object({ studentId: z.string().uuid() }).parse(req.body).studentId;
-        return res.status(201).json({ enrollment: await addEnrollment(classId, studentId) });
+        return res.status(201).json({ enrollment: await addEnrollment(classId, studentId, req.user!.userId) });
     } catch (error) {
         const conflict = error instanceof Error && (error.message.includes("capacity") || error.message.includes("already enrolled"));
         return res.status(conflict ? 409 : 400).json({ message: getErrorMessage(error, "Could not enrol student") });
@@ -59,7 +59,7 @@ router.delete("/:id/enrollments/:studentId", async (req, res) => {
     try {
         const classId = z.string().uuid().parse(req.params.id);
         const studentId = z.string().uuid().parse(req.params.studentId);
-        const enrollment = await removeEnrollment(classId, studentId);
+        const enrollment = await removeEnrollment(classId, studentId, req.user!.userId);
         if (!enrollment) return res.status(404).json({ message: "Enrolment not found" });
         return res.status(204).send();
     } catch (error) {

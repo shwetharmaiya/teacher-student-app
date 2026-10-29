@@ -4,7 +4,7 @@ A role-based school management application with a React and TypeScript frontend,
 
 ## Project status
 
-This is an in-progress application. The core app shell and several academic workflows are connected to the API and database. Some teacher and grade workflows remain placeholders; Phases 1 through 4 are implemented, while later phases remain planned.
+This is an in-progress application. Phases 1 through 6 are implemented, including scoped announcements, in-app notifications, attendance and grade reports, and audit events. Deployment hardening and automated tests remain planned.
 
 ### Implemented
 
@@ -18,14 +18,15 @@ This is an in-progress application. The core app shell and several academic work
 - Teacher submission review, return-for-revision workflow, and final grading for teacher-owned assignments.
 - Parent dashboard, linked-child selector, attendance, and assignment views. Parent access is limited to administrator-verified parent-student links.
 - Admin parent-link workflow for verifying and revoking relationships.
+- Announcements for school-wide and class audiences, with notification fan-out to eligible users.
+- In-app notifications for published announcements and grading events, with owner-only read/unread controls.
+- Server-calculated, role-scoped attendance and grade reports with filters, summary totals, and pagination.
+- Audit events for account, enrollment, attendance-roster, and grading changes.
 - PostgreSQL schema and Drizzle migration history for users, classes, enrollments, parent links, subjects, teacher assignments, assignments, attendance, and submissions.
 - Health endpoint at `GET /api/health`.
 
 ### Still in progress
 
-- Student marks and grade views; teacher student, marks, and assignment navigation pages.
-
-- Grading, feedback, reporting, announcements, messaging, and notifications.
 - Production deployment configuration and automated tests.
 
 Routes that currently render the shared “coming soon” feature page are placeholders, not completed workflows. The marks route now shows final grades for students and verified parents; grade correction and reopening remain deferred until an audited correction flow is designed.
@@ -46,7 +47,8 @@ Express API (backend/src/server.ts)
   ├─ CORS, JSON parsing, health endpoint, route mounting
   ├─ route modules parse inputs and apply authentication/role checks
   ├─ services apply school workflow rules and query/update data
-  └─ Drizzle ORM maps TypeScript queries to PostgreSQL
+  ├─ Drizzle ORM maps TypeScript queries to PostgreSQL
+  └─ announcement, notification, report, and audit services enforce visibility and ownership
                   │
                   ▼
 PostgreSQL (schema + checked-in SQL migrations)
@@ -58,6 +60,9 @@ Responsibilities should remain separated as features grow:
 - **Auth context and route guards** restore the browser session and route users to the right area. These guards improve navigation but cannot replace API authorization.
 - **Express routes** define the HTTP contract, parse/validate request data, and compose middleware. Keep role checks close to route definitions.
 - **Services** implement reusable business rules and data operations, such as verifying that a teacher is assigned to a class before publishing work.
+- **Announcements and notifications** resolve audiences on the server; notification read state belongs to one account.
+- **Reports** calculate totals in the API after role-scoped filters are applied. The browser selects filters and renders returned summaries.
+- **Audit events** record actor, action, entity, and limited metadata. They do not store passwords, submission text, or feedback.
 - **Database schema and migrations** own persistent relationships and constraints. Every schema change should have a reviewed migration committed alongside the application change.
 
 ### Request lifecycle
@@ -71,10 +76,11 @@ Responsibilities should remain separated as features grow:
 
 ### Current feature boundaries
 
-- `backend/src/server.ts` mounts `/api/auth`, `/api/admin/users`, `/api/admin/parent-links`, `/api/classes`, `/api/subjects`, `/api/teacher`, `/api/student`, `/api/parent`, and `/api/class-enrollments`, and exposes `/api/health`.
+- `backend/src/server.ts` mounts `/api/auth`, `/api/admin/users`, `/api/admin/parent-links`, `/api/classes`, `/api/subjects`, `/api/teacher`, `/api/student`, `/api/parent`, `/api/announcements`, `/api/notifications`, `/api/reports`, and `/api/class-enrollments`, and exposes `/api/health`.
 - `backend/src/modules/auth/` handles bootstrap, login, and current-user resolution; `backend/src/modules/admin/` manages accounts and verified parent links; `backend/src/modules/parent/` returns data for linked children. `backend/src/middleware/` validates JWTs against the current account and enforces role access.
 - `backend/src/modules/classes/` owns class and enrollment administration; `subjects/` owns subjects and teacher-class-subject assignments.
 - `backend/src/modules/academic/` owns teacher/student dashboards, teacher class workspace, assignments, and attendance. Student submission operations live in `backend/src/services/` and `backend/src/routes/`.
+- `backend/src/modules/announcements/`, `notifications/`, and `reports/` own audience-scoped communications, read state, and server-side reporting.
 - `frontend/src/app/App.tsx` defines public and role-gated routes. `frontend/src/auth/` manages session restoration and route guards; `frontend/src/services/api/client.ts` centralizes HTTP calls.
 - `frontend/src/pages/` contains role-specific screens. Some routes intentionally render a shared placeholder while their workflows are planned.
 
@@ -87,6 +93,8 @@ users (teacher) ──< teacher_subject_assignments >── classes
                                   └───────────────> subjects
 classes ──< assignments ──< submissions >── users (student)
 classes ──< attendance_records >── users (student)
+users (author) ──< announcements ──< notifications >── users (recipient)
+users (actor) ──< audit_logs
 ```
 
 The role is stored on `users`; enrollments link student accounts to classes; parent links connect parent accounts to student accounts after administrator verification; teacher assignments link teachers, classes, and subjects; assignments belong to a class and teacher; submissions and attendance records belong to a student and class/assignment.
@@ -231,6 +239,12 @@ All routes are mounted under `/api`. Protected endpoints expect `Authorization: 
 | `GET` | `/parent/attendance?childId=` | Parent | Read attendance history for a linked child |
 | `GET` | `/parent/assignments?childId=` | Parent | Read published assignment details and submitted/not-submitted state for a linked child |
 | `GET` | `/parent/grades?childId=` | Verified parent | Read final grades and feedback for a linked child |
+| `GET`, `POST` | `/announcements` | Authenticated; admin/teacher can publish | List visible announcements or publish a school/class announcement |
+| `GET` | `/notifications?unreadOnly=&page=&limit=` | Authenticated | List the signed-in user's notifications and unread count |
+| `PUT` | `/notifications/:id/read` | Notification owner | Mark one notification read |
+| `PUT` | `/notifications/read-all` | Authenticated | Mark all of the signed-in user's notifications read |
+| `GET` | `/reports/attendance?from=&to=&classId=&studentId=&page=&limit=` | Authenticated | Role-scoped attendance summary and records |
+| `GET` | `/reports/grades?from=&to=&classId=&studentId=&page=&limit=` | Authenticated | Role-scoped final-grade summary and records |
 
 Students may submit late work; the app records the submitted time and applies no automatic late penalty. Students can edit work in `SUBMITTED` or `RETURNED` state, and resubmission clears prior review fields. A teacher can move `SUBMITTED` work to `GRADED` or `RETURNED`; returned work can be resubmitted or finalized as graded. Marks are whole numbers from 0 to 100. `RETURNED` requires feedback; feedback is limited to 2,000 characters. Final `GRADED` submissions are immutable: grade changes require a future audited correction/reopen workflow. Text submissions are limited to 10,000 characters. The backend has no logout endpoint; logout is currently client-side token removal. Submission uploads are not implemented.
 
@@ -245,6 +259,9 @@ Students may submit late work; the app records the submitted time and applies no
 - `assignments`: class, teacher, title, description, and due date.
 - `attendance_records`: per-student, per-class, per-date status (`PRESENT`, `ABSENT`, `LATE`).
 - `submissions`: assignment/student content, status, marks, and feedback fields.
+- `announcements`: author, SCHOOL/CLASS audience, optional class target, content, and publication timestamps.
+- `notifications`: event type, recipient, destination, source entity, creation time, and nullable `read_at` state.
+- `audit_logs`: actor, action, entity reference, limited JSON metadata, and event timestamp.
 
 ## Development plan
 
@@ -287,12 +304,13 @@ Implement each workflow vertically: schema/migration, API contract and validatio
 4. Added student and verified-parent grade views. Student queries derive student ID from the session; parent queries require an active verified parent/student link and return final graded data only.
 5. Policy: late submissions are accepted with no automatic penalty and preserve their submission timestamp. Students may resubmit while work is `SUBMITTED` or `RETURNED`; resubmission resets review fields. Teachers may grade submitted/returned work or return it for revisions. `GRADED` is terminal; grade corrections need a future audited correction/reopen flow.
 
-### Phase 6 — Communication and reporting
+### Phase 6 — Communication and reporting (implemented)
 
-1. Model announcements with author, audience/class targeting, publication time, and visibility rules.
-2. Add notifications only after the source events and read/unread behavior are defined.
-3. Build attendance and grade reports from server-side queries with role-scoped filters; add exports after report totals are verified.
-4. Consider audit history for grade, attendance, enrollment, and account changes.
+1. Announcements store author, audience, optional class target, and publication time. Admins can publish to the school or a class; teachers can publish only to classes they teach. Students see announcements for enrolled classes, while parents see announcements for classes attended by linked children. Future-dated announcements are hidden until publication.
+2. In-app notification sources are explicit: announcement publication notifies eligible recipients except the author; final grading notifies the student and verified linked parents; returning work notifies the student. A user can list, mark one read, or mark all read. API reads and updates are restricted to the authenticated recipient. Email and push delivery are not included.
+3. Attendance and grade reports calculate summaries on the server and support pagination and date/class filters. Admins can report school-wide; teachers are limited to assigned classes; students see only their own records; parents see only records for linked children. Student-specific parent filters are checked against the verified relationship. Exports are deferred until report totals are verified against operational data.
+4. Audit events cover account create/update/delete, enrollment add/remove, attendance roster saves, and grade/return actions. Metadata excludes passwords, submission text, and feedback. An audit history screen is future work.
+5. Migration `0006_ancient_blockbuster.sql` adds announcement, notification, and audit tables. Apply with `cd backend; npm run db:migrate` before using these routes against a database.
 
 ### Phase 7 — Release readiness
 
@@ -316,12 +334,13 @@ Implement each workflow vertically: schema/migration, API contract and validatio
 - Keep CORS `FRONTEND_URL` aligned with the deployed frontend origin.
 - The API and database must be reachable from the frontend user's environment; `VITE_API_URL` is compiled into the frontend build.
 - Parent access and student-specific records require server-side relationship/ownership checks as those features are added.
+- Announcements, reports, and notifications apply server-side visibility scopes; keep those checks in the API if new screens or exports are added.
 
 ## Repository map
 
 ```text
 backend/
-  src/modules/       Auth, classes, subjects, academic routes/services
+  src/modules/       Auth, classes, subjects, academic, announcement, report, and notification routes/services
   src/middleware/    Authentication and role authorization
   src/db/            Drizzle schema and PostgreSQL connection
   drizzle/           SQL migrations and migration metadata

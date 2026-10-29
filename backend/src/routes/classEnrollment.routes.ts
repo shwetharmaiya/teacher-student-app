@@ -14,7 +14,7 @@ router.post("/", authenticate, authorizeRoles("ADMIN"), async (req, res) => {
     const parsed = enrollmentSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: "Student and class IDs must be valid UUIDs" });
     try {
-        const enrollment = await enrollStudent(parsed.data.studentId, parsed.data.classId);
+        const enrollment = await enrollStudent(parsed.data.studentId, parsed.data.classId, req.user!.userId);
         return res.status(201).json({ enrollment });
     } catch (error) {
         if (error instanceof Error) {

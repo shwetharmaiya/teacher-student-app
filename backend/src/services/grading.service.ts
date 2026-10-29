@@ -1,6 +1,6 @@
 import { and, asc, desc, eq } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { assignments, classEnrollments, classes, submissions, users } from "../db/schema.js";
+import { assignments, auditLogs, classEnrollments, classes, notifications, parentStudentLinks, submissions, users } from "../db/schema.js";
 
 export type GradeInput =
     | { status: "GRADED"; marks: number; feedback?: string | undefined }
@@ -55,13 +55,13 @@ export async function gradeSubmission(teacherId: string, submissionId: string, i
 
         // All grade and resubmission writes lock the assignment first to serialize
         // changes to the same work and avoid a resubmission racing a grade.
-        const [assignment] = await tx.select({ id: assignments.id, teacherId: assignments.teacherId })
+        const [assignment] = await tx.select({ id: assignments.id, teacherId: assignments.teacherId, title: assignments.title })
             .from(assignments).where(eq(assignments.id, submissionReference.assignmentId)).for("update").limit(1);
         if (!assignment || assignment.teacherId !== teacherId) {
             throw new Error("You can only review submissions for assignments you created");
         }
 
-        const [submission] = await tx.select({ id: submissions.id, status: submissions.status })
+        const [submission] = await tx.select({ id: submissions.id, studentId: submissions.studentId, status: submissions.status })
             .from(submissions).where(and(
                 eq(submissions.id, submissionId),
                 eq(submissions.assignmentId, assignment.id),
@@ -88,6 +88,32 @@ export async function gradeSubmission(teacherId: string, submissionId: string, i
             marks: submissions.marks,
             feedback: submissions.feedback,
             gradedAt: submissions.gradedAt,
+        });
+        const eventType = input.status === "GRADED" ? "SUBMISSION_GRADED" as const : "SUBMISSION_RETURNED" as const;
+        const eventTitle = input.status === "GRADED" ? "Assignment graded" : "Work returned for revision";
+        const recipientIds = new Set<string>([submission.studentId]);
+        if (input.status === "GRADED") {
+            const parents = await tx.select({ parentId: parentStudentLinks.parentId }).from(parentStudentLinks)
+                .innerJoin(users, eq(parentStudentLinks.parentId, users.id))
+                .where(and(eq(parentStudentLinks.studentId, submission.studentId), eq(users.role, "PARENT")));
+            parents.forEach((link) => recipientIds.add(link.parentId));
+        }
+        await tx.insert(notifications).values([...recipientIds].map((userId) => ({
+            userId,
+            eventType,
+            title: eventTitle,
+            body: `${assignment.title} has been ${input.status === "GRADED" ? "graded" : "returned for revision"}.`,
+            href: userId === submission.studentId
+                ? `/student/assignments/${assignment.id}`
+                : `/parent/marks?childId=${submission.studentId}`,
+            entityId: submissionId,
+        })));
+        await tx.insert(auditLogs).values({
+            actorId: teacherId,
+            action: input.status === "GRADED" ? "SUBMISSION_GRADED" : "SUBMISSION_RETURNED",
+            entityType: "SUBMISSION",
+            entityId: submissionId,
+            metadata: { previousStatus: submission.status, status: input.status, marks: input.status === "GRADED" ? input.marks : null, feedbackProvided: Boolean(input.feedback?.trim()) },
         });
         return updated ?? null;
     });

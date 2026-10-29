@@ -1,8 +1,8 @@
 import { and, count, eq } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { classEnrollments, classes, users } from "../db/schema.js";
+import { auditLogs, classEnrollments, classes, users } from "../db/schema.js";
 
-export async function enrollStudent(studentId: string, classId: string) {
+export async function enrollStudent(studentId: string, classId: string, actorId?: string) {
     return db.transaction(async (tx) => {
         const [classRecord] = await tx
             .select({ id: classes.id, capacity: classes.capacity })
@@ -42,6 +42,14 @@ export async function enrollStudent(studentId: string, classId: string) {
             .insert(classEnrollments)
             .values({ studentId, classId })
             .returning();
+        if (!enrollment) throw new Error("Could not create class enrollment");
+        if (actorId) await tx.insert(auditLogs).values({
+            actorId,
+            action: "STUDENT_ENROLLED",
+            entityType: "CLASS_ENROLLMENT",
+            entityId: enrollment.id,
+            metadata: { classId, studentId },
+        });
         return enrollment;
     });
 }

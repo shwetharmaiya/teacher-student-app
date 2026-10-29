@@ -1,6 +1,6 @@
 import { and, asc, count, eq, inArray } from "drizzle-orm";
 import { db } from "../../db/index.js";
-import { classEnrollments, classes, users } from "../../db/schema.js";
+import { auditLogs, classEnrollments, classes, users } from "../../db/schema.js";
 import { enrollStudent } from "../../services/classEnrollment.service.js";
 
 export type ClassInput = {
@@ -84,14 +84,24 @@ export async function getClassEnrollments(classId: string) {
         .orderBy(asc(users.email));
 }
 
-export async function addEnrollment(classId: string, studentId: string) {
-    return enrollStudent(studentId, classId);
+export async function addEnrollment(classId: string, studentId: string, actorId: string) {
+    return enrollStudent(studentId, classId, actorId);
 }
 
-export async function removeEnrollment(classId: string, studentId: string) {
-    const [enrollment] = await db.delete(classEnrollments)
-        .where(and(eq(classEnrollments.classId, classId), eq(classEnrollments.studentId, studentId)))
-        .returning({ id: classEnrollments.id });
-    return enrollment ?? null;
+export async function removeEnrollment(classId: string, studentId: string, actorId: string) {
+    return db.transaction(async (tx) => {
+        const [enrollment] = await tx.delete(classEnrollments)
+            .where(and(eq(classEnrollments.classId, classId), eq(classEnrollments.studentId, studentId)))
+            .returning({ id: classEnrollments.id });
+        if (!enrollment) return null;
+        await tx.insert(auditLogs).values({
+            actorId,
+            action: "STUDENT_REMOVED_FROM_CLASS",
+            entityType: "CLASS_ENROLLMENT",
+            entityId: enrollment.id,
+            metadata: { classId, studentId },
+        });
+        return enrollment;
+    });
 }
 
