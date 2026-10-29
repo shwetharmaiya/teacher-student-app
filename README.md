@@ -104,18 +104,18 @@ The frontend lives in `frontend/`, the API in `backend/`, and the schema/migrati
 
 - Node.js and npm
 - PostgreSQL database
-- A database URL and JWT secret for the backend
+- A PostgreSQL `DATABASE_URL`, a `JWT_SECRET` of at least 32 characters, and one or more exact frontend origins in `FRONTEND_URL`
 
 ## Setup
 
 ### 1. Configure the backend
 
-Create `backend/.env` (do not commit secrets):
+Copy `backend/.env.example` to `backend/.env` (do not commit secrets):
 
 ```dotenv
 PORT=3000
 DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/teacher_student_app
-JWT_SECRET=replace-with-a-long-random-secret
+JWT_SECRET=replace-with-a-random-secret-at-least-32-characters-long
 BOOTSTRAP_ADMIN_KEY=replace-with-a-one-time-random-secret
 FRONTEND_URL=http://localhost:5173
 ```
@@ -157,7 +157,7 @@ cd backend
 npm run dev
 ```
 
-Open the Vite URL printed in the frontend terminal (normally `http://localhost:5173`). The API health check is `http://localhost:3000/api/health`.
+Open the Vite URL printed in the frontend terminal (normally `http://localhost:5173`). The API readiness check is `http://localhost:3000/api/health`; it returns `503` when PostgreSQL is unavailable.
 
 ### Build commands
 
@@ -172,7 +172,22 @@ npm run lint
 npm run build
 ```
 
-The frontend also has `npm run preview` to serve a production build locally. There is no automated test script currently configured.
+The frontend also has `npm run preview` to serve a production build locally. See the test commands below for the UI smoke and API integration suites.
+
+### Test commands
+
+Backend API integration tests require a dedicated PostgreSQL test database. They refuse to use `DATABASE_URL` as a fallback; the test runner only connects when `TEST_DATABASE_URL` is explicitly set. Apply migrations to that isolated database before running:
+
+```powershell
+cd backend
+$env:DATABASE_URL = "postgresql://USER:PASSWORD@localhost:5432/teacher_student_app_test"
+$env:TEST_DATABASE_URL = $env:DATABASE_URL
+npm run db:migrate
+npm test
+Remove-Item Env:DATABASE_URL, Env:TEST_DATABASE_URL
+```
+
+The API suite creates uniquely named accounts/classes, exercises login, authorization, class ownership, enrollment, attendance, assignment ownership/enrollment, and parent-child scoping, then removes its fixtures. Frontend `npm test` runs server-rendered screen smoke checks for announcements and reports. GitHub Actions runs both test commands, applies migrations on a disposable PostgreSQL service, and builds both applications.
 
 ## First use
 
@@ -314,10 +329,27 @@ Implement each workflow vertically: schema/migration, API contract and validatio
 
 ### Phase 7 — Release readiness
 
-1. Add API and UI tests for login, role denial, class ownership, enrollment, attendance, assignments, and parent scoping.
-2. Add consistent error handling, request logging, database connection shutdown, and deployment environment documentation.
-3. Review CORS, secrets, rate limiting, registration policy, and token/session storage for the target deployment.
-4. Run migration and build checks in CI, and document backup/restore and rollback expectations.
+1. Added PostgreSQL-backed API integration coverage for login, disabled public registration, role denial, teacher class ownership, student-only enrollment, capacity, attendance roster ownership, assignment ownership/enrollment, and linked-parent scoping. Added configuration validation tests and UI smoke tests for the announcement and report screens.
+2. Added exact-origin CORS allowlisting, request IDs and structured request logs, baseline security headers, a 1 MB JSON body limit, a global 404/error response, auth endpoint rate limits, and graceful HTTP/database-pool shutdown on SIGINT/SIGTERM.
+3. Startup validates PostgreSQL URL, a 32-character minimum JWT secret, allowed frontend origins, port, and HTTPS origins in production. Public registration remains disabled and first-admin bootstrap remains a deliberate one-time path. Login/bootstrap are limited to 20 attempts per IP per 15 minutes in a single process. Tokens remain in browser `localStorage`; use HTTPS and consider HttpOnly secure cookies before production if the authentication architecture is upgraded.
+4. Added GitHub Actions with disposable PostgreSQL, migration application, backend tests/build, frontend tests/build, and lint. Backup, restore, and rollback steps are documented below.
+
+### Production backup, restore, and rollback
+
+Take a PostgreSQL custom-format backup before every production migration and store it in access-controlled encrypted storage. Do not keep credentials in command history; use `PGPASSWORD` only through a secret manager or prompt.
+
+```powershell
+pg_dump --format=custom --no-owner --file="school-before-release.dump" "$env:DATABASE_URL"
+```
+
+To restore into a newly created recovery database, preserve the original database for investigation and use:
+
+```powershell
+createdb school_recovery
+pg_restore --no-owner --dbname="school_recovery" "school-before-release.dump"
+```
+
+Drizzle migrations in this repository do not have generated down migrations. For an application rollback, first deploy the prior compatible application version. If the migration is not backward-compatible or data must be reverted, stop writes, restore the pre-release backup into a separate database, validate it, and switch the application connection during a controlled maintenance window. Prefer a forward-fix migration for production data corrections; never run `db:push` as a production rollback strategy. Verify health, login, scoped reads/writes, and migration state after recovery.
 
 ### Definition of done for each workflow
 
@@ -332,6 +364,8 @@ Implement each workflow vertically: schema/migration, API contract and validatio
 - JWTs are signed with `JWT_SECRET`; set a strong secret outside source control.
 - The browser currently stores access tokens in `localStorage`. Consider secure HttpOnly cookie-based sessions and refresh/session management for production.
 - Keep CORS `FRONTEND_URL` aligned with the deployed frontend origin.
+- `FRONTEND_URL` accepts comma-separated exact origins. Production requires HTTPS origins. Login and bootstrap are rate-limited in memory to 20 attempts per client IP per 15 minutes; use an edge or shared rate limiter if deploying multiple API instances.
+- Do not commit `.env` files. Validate the bootstrap secret is removed after first-admin provisioning, rotate JWT secrets deliberately, and use the same strong JWT secret across healthy API instances during a deployment.
 - The API and database must be reachable from the frontend user's environment; `VITE_API_URL` is compiled into the frontend build.
 - Parent access and student-specific records require server-side relationship/ownership checks as those features are added.
 - Announcements, reports, and notifications apply server-side visibility scopes; keep those checks in the API if new screens or exports are added.

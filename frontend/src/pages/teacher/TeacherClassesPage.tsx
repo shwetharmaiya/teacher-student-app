@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../services/api/client";
+import { mapTeacherClassDetails, type AttendanceStatus, type TeacherClassDetails } from "./teacherClassData";
 
 type TeacherClass = { id: string; grade: string; section: string; room: string; studentCount: number };
-type ClassDetails = { id: string; grade: string; section: string; room: string; students: { id: string; email: string; attendanceStatus: AttendanceStatus | null }[] };
-type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -11,7 +10,7 @@ export default function TeacherClassesPage() {
   const [classes, setClasses] = useState<TeacherClass[]>([]);
   const [selectedClassId, setSelectedClassId] = useState("");
   const [attendanceDate, setAttendanceDate] = useState(today);
-  const [details, setDetails] = useState<ClassDetails | null>(null);
+  const [details, setDetails] = useState<TeacherClassDetails | null>(null);
   const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -36,19 +35,32 @@ export default function TeacherClassesPage() {
     if (!selectedClassId) {
       return;
     }
+    let active = true;
     const loadDetails = async () => {
       setIsLoading(true);
+      setError("");
       try {
-        const response = await apiFetch<{ class: ClassDetails; attendanceDate: string }>(`/teacher/classes/${selectedClassId}?date=${attendanceDate}`);
-        setDetails(response.class);
-        setAttendance(Object.fromEntries(response.class.students.map((student) => [student.id, student.attendanceStatus ?? "PRESENT"])));
+        const response = await apiFetch<{
+          class: { id: string; grade: string; section: string; room: string; students: number };
+          students: Array<{ id: string; email: string }>;
+          attendance: Array<{ studentId: string; status: AttendanceStatus }>;
+          attendanceDate: string;
+        }>(`/teacher/classes/${selectedClassId}?date=${attendanceDate}`);
+        if (!active) return;
+        const classDetails = mapTeacherClassDetails(response);
+        setDetails(classDetails);
+        setAttendance(Object.fromEntries(classDetails.students.map((student) => [student.id, student.attendanceStatus ?? "PRESENT"])));
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : "Could not load the class roster");
+        if (active) {
+          setDetails(null);
+          setError(loadError instanceof Error ? loadError.message : "Could not load the class roster");
+        }
       } finally {
-        setIsLoading(false);
+        if (active) setIsLoading(false);
       }
     };
     void loadDetails();
+    return () => { active = false; };
   }, [selectedClassId, attendanceDate]);
 
   const saveAttendance = async () => {
@@ -70,9 +82,11 @@ export default function TeacherClassesPage() {
   return <section>
     <div className="page-heading"><div><p className="eyebrow">Teaching</p><h2>My classes</h2><p className="page-intro">Review your class roster and record daily attendance.</p></div></div>
     {error && <p className="classes-error" role="alert">{error}</p>}
-    {!isLoading && classes.length === 0 && <article className="panel"><h3>No assigned classes</h3><p>An administrator needs to connect your teacher account to a class before it appears here.</p></article>}
+    {isLoading && classes.length === 0 && <article className="panel" role="status">Loading your classes…</article>}
+    {!isLoading && !error && classes.length === 0 && <article className="panel"><h3>No assigned classes</h3><p>An administrator needs to connect your teacher account to a class before it appears here.</p></article>}
     {classes.length > 0 && <article className="classes-card teacher-classes-card"><div className="classes-toolbar"><label className="filter-field"><span>Class</span><select value={selectedClassId} onChange={(event) => setSelectedClassId(event.target.value)}>{classes.map((classItem) => <option key={classItem.id} value={classItem.id}>{classItem.grade} {classItem.section} · Room {classItem.room}</option>)}</select></label><label className="filter-field"><span>Attendance date</span><input type="date" value={attendanceDate} onChange={(event) => setAttendanceDate(event.target.value)} /></label></div>
-      {isLoading && <div className="empty-state"><strong>Loading class roster…</strong></div>}
+      {isLoading && <div className="empty-state" role="status"><strong>Loading class roster…</strong></div>}
+      {!isLoading && error && <div className="empty-state">The roster could not be displayed. Try selecting the class again.</div>}
       {!isLoading && details && <><div className="roster-heading"><div><h3>{details.grade} {details.section}</h3><span>Room {details.room} · {details.students.length} students</span></div><button className="button" type="button" onClick={saveAttendance} disabled={isSaving || details.students.length === 0}>{isSaving ? "Saving…" : "Save attendance"}</button></div><div className="table-scroll"><table className="classes-table"><thead><tr><th>Student</th><th>Attendance</th></tr></thead><tbody>{details.students.map((student) => <tr key={student.id}><td><strong>{student.email}</strong></td><td><select className="attendance-select" value={attendance[student.id] ?? "PRESENT"} onChange={(event) => setAttendance((current) => ({ ...current, [student.id]: event.target.value as AttendanceStatus }))}><option value="PRESENT">Present</option><option value="LATE">Late</option><option value="ABSENT">Absent</option></select></td></tr>)}</tbody></table></div>{details.students.length === 0 && <div className="empty-state"><strong>No students are enrolled in this class.</strong></div>}</>}
     </article>}
   </section>;

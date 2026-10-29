@@ -17,8 +17,12 @@ export default function ProtectedRoute({
     children,
     allowedRoles,
 }: ProtectedRouteProps) {
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
     const location = useLocation();
+
+    if (loading) {
+        return <div role="status">Restoring your session…</div>;
+    }
 
     // Not logged in
     if (!user) {

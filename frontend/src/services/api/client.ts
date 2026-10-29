@@ -13,6 +13,7 @@ export async function apiFetch<T>(
 
     const response = await fetch(`${API_URL}${endpoint}`, {
         ...options,
+        cache: options.cache ?? "no-store",
         headers: {
             "Content-Type": "application/json",
             ...(token

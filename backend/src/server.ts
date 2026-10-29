@@ -1,58 +1,54 @@
 import "dotenv/config";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+import { createApp } from "./app.js";
+import { loadConfig } from "./config.js";
+import { pool } from "./db/index.js";
 
-import express from "express";
-import cors from "cors";
-
-import authRoutes from "./modules/auth/auth.routes.js";
-import adminUserRoutes from "./modules/admin/users.routes.js";
-import classRoutes from "./modules/classes/classes.routes.js";
-import { studentRouter, teacherRouter } from "./modules/academic/academic.routes.js";
-import subjectRoutes from "./modules/subjects/subjects.routes.js"; 
-import studentAssignmentRoutes from "./routes/studentAssignment.routes.js"; 
-import classEnrollmentRoutes from "./routes/classEnrollment.routes.js";
-import parentRoutes from "./modules/parent/parent.routes.js";
-import adminParentLinkRoutes from "./modules/admin/parentLinks.routes.js";
-import announcementRoutes from "./modules/announcements/announcements.routes.js";
-import notificationRoutes from "./modules/notifications/notifications.routes.js";
-import reportsRoutes from "./modules/reports/reports.routes.js";
-const app = express();
-
-const PORT = Number(process.env.PORT) || 3000;
-
-app.use(
-    cors({
-        origin: process.env.FRONTEND_URL,
-        credentials: true,
-    }),
-);
-
-app.use(express.json());
-
-app.get("/api/health", (_req, res) => {
-    res.json({
-        status: "ok",
-        message: "Teacher Student API is running",
+export function startServer() {
+    const config = loadConfig();
+    const app = createApp();
+    const server = app.listen(config.port, () => {
+        console.info(JSON.stringify({ level: "info", event: "server_started", port: config.port, environment: config.nodeEnv }));
     });
-});
+    let shuttingDown = false;
 
-app.use("/api/auth", authRoutes);
-app.use("/api/admin/users", adminUserRoutes);
-app.use("/api/admin/parent-links", adminParentLinkRoutes);
-app.use("/api/announcements", announcementRoutes);
-app.use("/api/notifications", notificationRoutes);
-app.use("/api/reports", reportsRoutes);
-app.use("/api/classes", classRoutes);
-app.use("/api/subjects", subjectRoutes);
-app.use("/api/teacher", teacherRouter);
-app.use("/api/student", studentRouter);
-app.use("/api/student", studentAssignmentRoutes);
-app.use("/api/parent", parentRoutes);
-app.use(
-  "/api/class-enrollments",
-  classEnrollmentRoutes
-);
+    const shutdown = (signal: string) => {
+        if (shuttingDown) return;
+        shuttingDown = true;
+        console.info(JSON.stringify({ level: "info", event: "server_shutdown_started", signal }));
+        const forceTimer = setTimeout(() => {
+            console.error(JSON.stringify({ level: "error", event: "server_shutdown_timeout" }));
+            process.exitCode = 1;
+            server.closeAllConnections();
+            void pool.end().finally(() => process.exit());
+        }, 10_000);
+        forceTimer.unref();
+        server.close((error) => {
+            clearTimeout(forceTimer);
+            if (error) {
+                console.error(JSON.stringify({ level: "error", event: "http_server_close_failed", message: error.message }));
+                process.exitCode = 1;
+            }
+            void pool.end().catch((poolError: unknown) => {
+                const message = poolError instanceof Error ? poolError.message : "unknown database shutdown error";
+                console.error(JSON.stringify({ level: "error", event: "database_pool_close_failed", message }));
+                process.exitCode = 1;
+            });
+        });
+    };
 
-app.listen(PORT, () => {
-    console.log(`API running on http://localhost:${PORT}`);
-});
+    process.once("SIGINT", () => shutdown("SIGINT"));
+    process.once("SIGTERM", () => shutdown("SIGTERM"));
+    return server;
+}
 
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+    try {
+        startServer();
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Application startup failed";
+        console.error(JSON.stringify({ level: "fatal", event: "configuration_error", message }));
+        process.exitCode = 1;
+    }
+}

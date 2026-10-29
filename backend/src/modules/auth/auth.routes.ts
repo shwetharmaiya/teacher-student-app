@@ -3,6 +3,7 @@ import { z } from "zod";
 import { authenticate } from "../../middleware/auth.middleware.js";
 import { bootstrapAdminAccount, loginUser } from "./auth.service.js";
 import { getMe } from "./auth.controller.js";
+import { authRateLimit } from "../../middleware/request.middleware.js";
 
 const router = Router();
 const loginSchema = z.object({
@@ -21,7 +22,7 @@ router.post("/register", (_req, res) => res.status(403).json({
     message: "Public registration is disabled. Ask a school administrator to create your account.",
 }));
 
-router.post("/bootstrap-admin", async (req, res) => {
+router.post("/bootstrap-admin", authRateLimit, async (req, res) => {
     const parsed = bootstrapSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.issues[0]?.message ?? "Invalid bootstrap request" });
     try {
@@ -36,7 +37,7 @@ router.post("/bootstrap-admin", async (req, res) => {
     }
 });
 
-router.post("/login", async (req, res) => {
+router.post("/login", authRateLimit, async (req, res) => {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.issues[0]?.message ?? "Invalid login request" });
     try {
