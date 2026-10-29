@@ -1,4 +1,4 @@
-import type { StudentClass, AttendanceRecord, AttendanceResponse } from "../../types/StudentAttendancePage.ts";
+import type { StudentClass, AttendanceResponse } from "../../types/StudentAttendancePage.ts";
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "../../services/api/client";
 

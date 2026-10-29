@@ -1,4 +1,4 @@
-import type { ParentChild, ParentDashboardData } from "../../types/ParentDashboard.ts";
+import type { ParentDashboardData } from "../../types/ParentDashboard.ts";
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { apiFetch } from "../../services/api/client";

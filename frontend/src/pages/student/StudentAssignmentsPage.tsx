@@ -1,4 +1,4 @@
-import type { Submission, Assignment, AssignmentsResponse } from "../../types/StudentAssignmentsPage.ts";
+import type { Assignment, AssignmentsResponse } from "../../types/StudentAssignmentsPage.ts";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiFetch } from "../../services/api/client";

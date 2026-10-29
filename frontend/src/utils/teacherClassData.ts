@@ -1,4 +1,4 @@
-import type { AttendanceStatus, TeacherClassDetailsResponse, TeacherClassDetails } from "../types/teacherClassData.ts";
+import type { TeacherClassDetailsResponse, TeacherClassDetails } from "../types/teacherClassData.ts";
 
 
 

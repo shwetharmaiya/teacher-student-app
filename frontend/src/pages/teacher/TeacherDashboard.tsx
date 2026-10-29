@@ -1,4 +1,4 @@
-import type { TeacherClass, Assignment, TeacherDashboardData } from "../../types/TeacherDashboard.ts";
+import type { Assignment, TeacherDashboardData } from "../../types/TeacherDashboard.ts";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiFetch } from "../../services/api/client";

@@ -1,4 +1,4 @@
-import type { UserRole, User, AuthContextValue, LoginResponse, MeResponse } from "../types/AuthContext.ts";
+import type { User, AuthContextValue, LoginResponse, MeResponse } from "../types/AuthContext.ts";
 import {
   createContext,
   useContext,

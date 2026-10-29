@@ -1,5 +1,5 @@
-import type { UserRole, ProtectedRouteProps } from "../types/ProtectedRoute.ts";
-import type { ReactNode } from "react";
+import type { ProtectedRouteProps } from "../types/ProtectedRoute.ts";
+import type { UserRole } from "../types/AuthContext.ts";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 

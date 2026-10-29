@@ -1,5 +1,4 @@
 import type { RoleRouteProps } from "../types/RoleRoute.ts";
-import type { UserRole } from "../types/AuthContext.ts";
 import {
   Navigate,
   Outlet,

@@ -1,4 +1,4 @@
-import type { TeachingAssignment, MyAssignmentsResponse, Student, ClassDetailsResponse, Assignment, AttendanceStatus, AttendanceMap } from "../../types/TeacherClassWorkspacePage.ts";
+import type { TeachingAssignment, MyAssignmentsResponse, ClassDetailsResponse, Assignment, AttendanceStatus, AttendanceMap } from "../../types/TeacherClassWorkspacePage.ts";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { apiFetch } from "../../services/api/client";
