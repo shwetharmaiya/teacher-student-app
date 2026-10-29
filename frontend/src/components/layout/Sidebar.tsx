@@ -7,6 +7,7 @@ const navigation: Record<UserRole, { label: string; to: string }[]> = {
     { label: "Users", to: "/admin/users" },
     { label: "Classes", to: "/admin/classes" },
     { label: "Subjects", to: "/admin/subjects" },
+    { label: "Parent links", to: "/admin/parent-links" },
   ],
   TEACHER: [
     { label: "Dashboard", to: "/teacher" },
@@ -27,6 +28,7 @@ const navigation: Record<UserRole, { label: string; to: string }[]> = {
     { label: "Dashboard", to: "/parent/dashboard" },
     { label: "My Children", to: "/parent/children" },
     { label: "Attendance", to: "/parent/attendance" },
+    { label: "Assignments", to: "/parent/assignments" },
     { label: "Marks", to: "/parent/marks" },
   ],
 };

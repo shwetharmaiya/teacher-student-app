@@ -4,7 +4,7 @@ A role-based school management application with a React and TypeScript frontend,
 
 ## Project status
 
-This is an in-progress application. The core app shell and several academic workflows are connected to the API and database. Some dashboard pages are still summaries or placeholders; Phases 1 and 2 are implemented, while later phases remain planned.
+This is an in-progress application. The core app shell and several academic workflows are connected to the API and database. Some teacher and grade workflows remain placeholders; Phases 1 through 4 are implemented, while later phases remain planned.
 
 ### Implemented
 
@@ -15,19 +15,19 @@ This is an in-progress application. The core app shell and several academic work
 - Admin subject management and teaching assignments: create, list, edit, delete subjects; assign teachers, classes, and subjects; view and remove assignments.
 - Teacher dashboard and assigned teaching list; class workspace with enrolled students, assignment creation, and attendance entry.
 - Student dashboard and assignment list/detail/submission workflow, including resubmission until grading.
-- PostgreSQL schema and Drizzle migration history for users, classes, enrollments, subjects, teacher assignments, assignments, attendance, and submissions.
+- Parent dashboard, linked-child selector, attendance, and assignment views. Parent access is limited to administrator-verified parent-student links.
+- Admin parent-link workflow for verifying and revoking relationships.
+- PostgreSQL schema and Drizzle migration history for users, classes, enrollments, parent links, subjects, teacher assignments, assignments, attendance, and submissions.
 - Health endpoint at `GET /api/health`.
 
 ### Still in progress
 
-- Parent dashboard data and parent-to-student linking.
-
-- Student class, attendance, marks, and grade views; teacher student, marks, and assignment navigation pages.
+- Student marks and grade views; teacher student, marks, and assignment navigation pages.
 
 - Grading, feedback, reporting, announcements, messaging, and notifications.
 - Production deployment configuration and automated tests.
 
-Routes that currently render the shared “coming soon” feature page are placeholders, not completed workflows. The parent dashboard is also a presentational starting point rather than a data-backed view.
+Routes that currently render the shared “coming soon” feature page are placeholders, not completed workflows. Parent grade views are intentionally deferred until the teacher grading workflow exists.
 
 ## Architecture
 
@@ -70,8 +70,8 @@ Responsibilities should remain separated as features grow:
 
 ### Current feature boundaries
 
-- `backend/src/server.ts` mounts `/api/auth`, `/api/admin/users`, `/api/classes`, `/api/subjects`, `/api/teacher`, `/api/student`, and `/api/class-enrollments`, and exposes `/api/health`.
-- `backend/src/modules/auth/` handles bootstrap, login, and current-user resolution; `backend/src/modules/admin/` manages accounts. `backend/src/middleware/` validates JWTs against the current account and enforces role access.
+- `backend/src/server.ts` mounts `/api/auth`, `/api/admin/users`, `/api/admin/parent-links`, `/api/classes`, `/api/subjects`, `/api/teacher`, `/api/student`, `/api/parent`, and `/api/class-enrollments`, and exposes `/api/health`.
+- `backend/src/modules/auth/` handles bootstrap, login, and current-user resolution; `backend/src/modules/admin/` manages accounts and verified parent links; `backend/src/modules/parent/` returns data for linked children. `backend/src/middleware/` validates JWTs against the current account and enforces role access.
 - `backend/src/modules/classes/` owns class and enrollment administration; `subjects/` owns subjects and teacher-class-subject assignments.
 - `backend/src/modules/academic/` owns teacher/student dashboards, teacher class workspace, assignments, and attendance. Student submission operations live in `backend/src/services/` and `backend/src/routes/`.
 - `frontend/src/app/App.tsx` defines public and role-gated routes. `frontend/src/auth/` manages session restoration and route guards; `frontend/src/services/api/client.ts` centralizes HTTP calls.
@@ -81,13 +81,14 @@ Responsibilities should remain separated as features grow:
 
 ```text
 users ──< class_enrollments >── classes
+users (parent) ──< parent_student_links >── users (student)
 users (teacher) ──< teacher_subject_assignments >── classes
                                   └───────────────> subjects
 classes ──< assignments ──< submissions >── users (student)
 classes ──< attendance_records >── users (student)
 ```
 
-The role is stored on `users`; enrollments link student accounts to classes; teacher assignments link teachers, classes, and subjects; assignments belong to a class and teacher; submissions and attendance records belong to a student and class/assignment. Parent-child links do not exist yet and must be modeled before parent-specific student data is exposed.
+The role is stored on `users`; enrollments link student accounts to classes; parent links connect parent accounts to student accounts after administrator verification; teacher assignments link teachers, classes, and subjects; assignments belong to a class and teacher; submissions and attendance records belong to a student and class/assignment.
 
 The frontend lives in `frontend/`, the API in `backend/`, and the schema/migrations in `backend/src/db/schema.ts` and `backend/drizzle/`. There is no root package manifest; install and run each app from its own directory.
 ## Requirements
@@ -194,6 +195,9 @@ All routes are mounted under `/api`. Protected endpoints expect `Authorization: 
 | `GET` | `/admin/users?search=&role=&page=&limit=` | Admin | Search and paginate safe account projections (limit max 100) |
 | `POST` | `/admin/users` | Admin | Create an account with a hashed password |
 | `PUT`, `DELETE` | `/admin/users/:id` | Admin | Update or delete an account; self-delete and last-admin removal are blocked |
+| `GET` | `/admin/parent-links` | Admin | List verified parent-student relationships |
+| `POST` | `/admin/parent-links` | Admin | Verify and link a parent and student account |
+| `DELETE` | `/admin/parent-links/:id` | Admin | Revoke a parent-student relationship |
 | `POST` | `/auth/login` | Public | Authenticate and receive token/user |
 | `GET` | `/auth/me` | Authenticated | Resolve current user |
 | `GET`, `POST` | `/classes` | Admin | List/create classes |
@@ -217,6 +221,10 @@ All routes are mounted under `/api`. Protected endpoints expect `Authorization: 
 | `GET` | `/student/assignments` | Student | List enrolled-class assignments with submission status |
 | `GET` | `/student/assignments/:assignmentId` | Enrolled student | Load assignment details and the signed-in student submission |
 | `POST` | `/student/assignments/:assignmentId/submissions` | Enrolled student | Submit or resubmit text content (maximum 10,000 characters) |
+| `GET` | `/parent/children` | Parent | List only students linked to the signed-in parent |
+| `GET` | `/parent/dashboard?childId=` | Parent | Read a linked child's attendance summary, classes, and recent assignments; defaults to the first linked child |
+| `GET` | `/parent/attendance?childId=` | Parent | Read attendance history for a linked child |
+| `GET` | `/parent/assignments?childId=` | Parent | Read published assignment details and submitted/not-submitted state for a linked child |
 
 The student assignment detail screen shows the due date, current submission state, and any marks/feedback. Students may submit late work and edit/resubmit until the work is graded; graded submissions are locked. Resubmission updates the existing row and resets its grading fields. Text submissions are limited to 10,000 characters. The backend has no logout endpoint; logout is currently client-side token removal. Submission uploads and the teacher grading workflow are not implemented.
 
@@ -225,6 +233,7 @@ The student assignment detail screen shows the due date, current submission stat
 - `users`: email, password hash, and role.
 - `classes`: grade, section, optional teacher link, room, and capacity.
 - `class_enrollments`: many-to-many class/student enrollment.
+- `parent_student_links`: verified parent/student relationship, with unique pairs, verifier, and verification timestamp. One student may have multiple linked parents, and one parent may have multiple linked students.
 - `subjects`: named subjects with unique codes.
 - `teacher_subject_assignments`: teacher/class/subject links.
 - `assignments`: class, teacher, title, description, and due date.
@@ -257,12 +266,12 @@ Implement each workflow vertically: schema/migration, API contract and validatio
 3. Attendance writes verify teacher assignment and every submitted student’s enrollment inside the write service. The roster is checked for duplicate student IDs and bounded to the class capacity limit (200 entries).
 4. Roster upserts run in a database transaction while locking the class row. A request either updates/inserts all submitted records for that date or rolls back; repeated saves update the existing class/student/date record.
 
-### Phase 4 — Parent data model and views
+### Phase 4 — Parent data model and views (implemented)
 
-1. Add a parent-student relationship table with uniqueness and foreign keys, plus reviewed migration and admin linking workflow.
-2. Define whether one student can have multiple linked parents and how a parent account is verified before a link is approved.
-3. Add parent APIs that derive the parent ID from the authenticated user and restrict every result to linked students.
-4. Implement parent dashboard, child selector, attendance, assignment, and later grade summaries only after those ownership checks are in place.
+1. Added `parent_student_links` with foreign keys, unique parent/student pairs, lookup indexes, verifier identity, and verification time in migration `0005_gigantic_network.sql`.
+2. A student may have multiple linked parents, and a parent may have multiple linked students. An administrator must confirm the relationship through school records or the school's approved contact process before creating the link; the API stores the verifying admin and timestamp. Administrators can revoke links.
+3. Parent APIs derive the parent account ID from the JWT. Every child-specific API checks the link and the student's current `STUDENT` role; unlinked child IDs return `404`.
+4. Added admin parent-link management and parent dashboard, child selector, attendance history, and assignment list. Assignment views expose due date and submitted/not-submitted state only; marks, feedback, and submission content remain out of scope until grading is implemented.
 
 ### Phase 5 — Grading and assessment
 

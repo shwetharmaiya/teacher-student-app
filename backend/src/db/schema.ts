@@ -96,6 +96,25 @@ export const classEnrollments = pgTable(
     ],
 );
 
+// Links are created only after an administrator verifies the parent-child relationship.
+// The unique pair permits multiple parents per student and multiple children per parent.
+export const parentStudentLinks = pgTable(
+    "parent_student_links",
+    {
+        id: uuid("id").defaultRandom().primaryKey(),
+        parentId: uuid("parent_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+        studentId: uuid("student_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+        verifiedBy: uuid("verified_by").references(() => users.id, { onDelete: "set null" }),
+        verifiedAt: timestamp("verified_at", { withTimezone: true }).defaultNow().notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    },
+    (table) => [
+        uniqueIndex("parent_student_links_pair_unique").on(table.parentId, table.studentId),
+        index("parent_student_links_parent_idx").on(table.parentId),
+        index("parent_student_links_student_idx").on(table.studentId),
+    ],
+);
+
 export const assignments = pgTable("assignments", {
     id: uuid("id").defaultRandom().primaryKey(),
     classId: uuid("class_id").notNull().references(() => classes.id, {

@@ -25,6 +25,9 @@ import StudentAssignmentsPage from "../pages/student/StudentAssignmentsPage";
 import StudentAssignmentDetailsPage from "../pages/student/StudentAssignmentDetailsPage";
 import StudentClassesPage from "../pages/student/StudentClassesPage";
 import StudentAttendancePage from "../pages/student/StudentAttendancePage";
+import ParentLinksPage from "../pages/admin/ParentLinksPage";
+import ParentChildrenPage from "../pages/parent/ParentChildrenPage";
+import ParentRecordsPage from "../pages/parent/ParentRecordsPage";
 import "../index.css";
 
 export default function App() {
@@ -58,6 +61,7 @@ export default function App() {
                                 path="/admin/teaching-assignments"
                                 element={<TeachingAssignmentsPage />}
                             />
+                            <Route path="/admin/parent-links" element={<ParentLinksPage />} />
                         </Route>
 
                         <Route
@@ -147,14 +151,13 @@ export default function App() {
                             />
                             <Route
                                 path="/parent/children"
-                                element={
-                                    <RoleFeaturePage title="My children" />
-                                }
+                                element={<ParentChildrenPage />}
                             />
                             <Route
                                 path="/parent/attendance"
-                                element={<RoleFeaturePage title="Attendance" />}
+                                element={<ParentRecordsPage type="attendance" />}
                             />
+                            <Route path="/parent/assignments" element={<ParentRecordsPage type="assignments" />} />
                             <Route
                                 path="/parent/marks"
                                 element={<RoleFeaturePage title="Marks" />}

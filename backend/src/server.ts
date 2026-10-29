@@ -10,6 +10,8 @@ import { studentRouter, teacherRouter } from "./modules/academic/academic.routes
 import subjectRoutes from "./modules/subjects/subjects.routes.js"; 
 import studentAssignmentRoutes from "./routes/studentAssignment.routes.js"; 
 import classEnrollmentRoutes from "./routes/classEnrollment.routes.js";
+import parentRoutes from "./modules/parent/parent.routes.js";
+import adminParentLinkRoutes from "./modules/admin/parentLinks.routes.js";
 const app = express();
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -32,11 +34,13 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/admin/users", adminUserRoutes);
+app.use("/api/admin/parent-links", adminParentLinkRoutes);
 app.use("/api/classes", classRoutes);
 app.use("/api/subjects", subjectRoutes);
 app.use("/api/teacher", teacherRouter);
 app.use("/api/student", studentRouter);
 app.use("/api/student", studentAssignmentRoutes);
+app.use("/api/parent", parentRoutes);
 app.use(
   "/api/class-enrollments",
   classEnrollmentRoutes

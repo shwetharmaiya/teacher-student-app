@@ -1760,6 +1760,81 @@ a { color: inherit; }
 .student-attendance-status.late { background: #fef3c7; color: #92400e; }
 .student-attendance-status.absent { background: #fee2e2; color: #991b1b; }
 
+.parent-link-form-card {
+    padding: 22px;
+}
+
+.parent-link-form-card form {
+    display: grid;
+    gap: 16px;
+}
+
+.parent-link-form-card h3,
+.parent-link-form-card p {
+    margin: 0;
+}
+
+.parent-link-form-card p,
+.parent-assignment-card > div > p:not(.eyebrow) {
+    color: #64748b;
+}
+
+.parent-link-form-card select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: #fff;
+    font: inherit;
+}
+
+.parent-child-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.parent-child-actions a:not(.button) {
+    color: #2563eb;
+    font-weight: 600;
+}
+
+.parent-assignment-list {
+    display: grid;
+    gap: 14px;
+}
+
+.parent-assignment-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 20px;
+}
+
+.parent-assignment-card h3 {
+    margin: 4px 0;
+}
+
+.parent-assignment-card > div > p:not(.eyebrow) {
+    margin: 6px 0 0;
+}
+
+.parent-assignment-meta {
+    display: grid;
+    justify-items: end;
+    gap: 6px;
+    white-space: nowrap;
+    color: #64748b;
+}
+
+.parent-assignment-meta strong {
+    color: #0f172a;
+}
+
 @media (max-width: 650px) {
     .admin-pagination {
         align-items: stretch;
@@ -1773,5 +1848,14 @@ a { color: inherit; }
     .student-attendance-toolbar {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .parent-assignment-card {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .parent-assignment-meta {
+        justify-items: start;
     }
 }
