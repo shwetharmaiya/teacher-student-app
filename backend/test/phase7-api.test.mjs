@@ -121,6 +121,22 @@ test("Phase 7 API integration checks", { skip: !isDedicatedTestDatabase && "Set 
         assert.equal((await response.json()).user.role, "TEACHER");
     });
 
+    await t.test("admin dashboard returns live role, class, and attendance totals", async () => {
+        const summary = await request("/api/admin/dashboard", { token: tokens.admin });
+        assert.equal(summary.status, 200);
+        const expectedTotals = await pool.query("select count(*) filter (where role = 'STUDENT')::int as students, count(*) filter (where role = 'TEACHER')::int as teachers, (select count(*)::int from classes) as classes, count(*) filter (where role = 'PARENT')::int as parents from users");
+        assert.deepEqual(summary.body.totals, expectedTotals.rows[0]);
+        const expectedAttendance = await pool.query("select count(*)::int as recorded, count(*) filter (where status = 'PRESENT')::int as present, count(*) filter (where status = 'LATE')::int as late, count(*) filter (where status = 'ABSENT')::int as absent from attendance_records where attendance_date = $1", [summary.body.attendance.date]);
+        const daily = expectedAttendance.rows[0];
+        assert.deepEqual(summary.body.attendance, {
+            date: summary.body.attendance.date,
+            ...daily,
+            percentage: daily.recorded === 0 ? null : Math.round(((daily.present + daily.late) / daily.recorded) * 1000) / 10,
+        });
+        const denied = await request("/api/admin/dashboard", { token: tokens.teacher });
+        assert.equal(denied.status, 403);
+    });
+
     await t.test("Phase 2: admin user CRUD validates roles, hashes passwords, and omits secrets", async () => {
         const invalidRole = await request("/api/admin/users", { method: "POST", token: tokens.admin, body: { email: `${emailPrefix}-invalid@example.test`, password: "valid-password", role: "SUPERADMIN" } });
         assert.equal(invalidRole.status, 400);

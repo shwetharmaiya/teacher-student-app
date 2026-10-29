@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import authRoutes from "./modules/auth/auth.routes.js";
 import adminUserRoutes from "./modules/admin/users.routes.js";
+import adminDashboardRoutes from "./modules/admin/dashboard.routes.js";
 import classRoutes from "./modules/classes/classes.routes.js";
 import { studentRouter, teacherRouter } from "./modules/academic/academic.routes.js";
 import subjectRoutes from "./modules/subjects/subjects.routes.js";
@@ -47,6 +48,7 @@ export function createApp() {
     });
     app.use("/api/auth", authRoutes);
     app.use("/api/admin/users", adminUserRoutes);
+    app.use("/api/admin/dashboard", adminDashboardRoutes);
     app.use("/api/admin/parent-links", adminParentLinkRoutes);
     app.use("/api/announcements", announcementRoutes);
     app.use("/api/notifications", notificationRoutes);

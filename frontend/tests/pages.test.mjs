@@ -27,6 +27,15 @@ async function renderPage(modulePath, { props = {}, initialEntry = "/", routePat
     ));
 }
 
+test("admin dashboard displays live-data loading states without placeholder totals", async () => {
+    const html = await renderPage("/src/pages/admin/AdminDashboard.tsx");
+    assert.match(html, /Admin dashboard/);
+    assert.match(html, /Today(?:&#x27;|')s attendance/);
+    assert.match(html, /Loading today(?:&#x27;|')s attendance/);
+    assert.doesNotMatch(html, />842</);
+    assert.doesNotMatch(html, />94\.2%/);
+});
+
 test("admin announcements screen renders publishing controls and a loading state", async () => {
     const { default: AnnouncementsPage } = await vite.ssrLoadModule("/src/pages/AnnouncementsPage.tsx");
     const html = renderToStaticMarkup(React.createElement(AnnouncementsPage, { role: "ADMIN" }));

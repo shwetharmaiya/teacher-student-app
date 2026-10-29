@@ -76,8 +76,8 @@ Responsibilities should remain separated as features grow:
 
 ### Current feature boundaries
 
-- `backend/src/server.ts` mounts `/api/auth`, `/api/admin/users`, `/api/admin/parent-links`, `/api/classes`, `/api/subjects`, `/api/teacher`, `/api/student`, `/api/parent`, `/api/announcements`, `/api/notifications`, `/api/reports`, and `/api/class-enrollments`, and exposes `/api/health`.
-- `backend/src/modules/auth/` handles bootstrap, login, and current-user resolution; `backend/src/modules/admin/` manages accounts and verified parent links; `backend/src/modules/parent/` returns data for linked children. `backend/src/middleware/` validates JWTs against the current account and enforces role access.
+- `backend/src/server.ts` mounts `/api/auth`, `/api/admin/dashboard`, `/api/admin/users`, `/api/admin/parent-links`, `/api/classes`, `/api/subjects`, `/api/teacher`, `/api/student`, `/api/parent`, `/api/announcements`, `/api/notifications`, `/api/reports`, and `/api/class-enrollments`, and exposes `/api/health`.
+- `backend/src/modules/auth/` handles bootstrap, login, and current-user resolution; `backend/src/modules/admin/` provides live dashboard totals, manages accounts, and verifies parent links; `backend/src/modules/parent/` returns data for linked children. `backend/src/middleware/` validates JWTs against the current account and enforces role access.
 - `backend/src/modules/classes/` owns class and enrollment administration; `subjects/` owns subjects and teacher-class-subject assignments.
 - `backend/src/modules/academic/` owns teacher/student dashboards, teacher class workspace, assignments, and attendance. Student submission operations live in `backend/src/services/` and `backend/src/routes/`.
 - `backend/src/modules/announcements/`, `notifications/`, and `reports/` own audience-scoped communications, read state, and server-side reporting.
@@ -248,6 +248,7 @@ All routes are mounted under `/api`. Protected endpoints expect `Authorization: 
 | `GET` | `/health` | Public | API status |
 | `POST` | `/auth/register` | Public | Disabled; returns `403` and directs account requests to the school admin |
 | `POST` | `/auth/bootstrap-admin` | Public, one time | Create the first admin using `BOOTSTRAP_ADMIN_KEY` (password minimum 12 characters) |
+| `GET` | `/admin/dashboard` | Admin | Return live counts for students, teachers, classes, parents, and today's recorded attendance |
 | `GET` | `/admin/users?search=&role=&page=&limit=` | Admin | Search and paginate safe account projections (limit max 100) |
 | `POST` | `/admin/users` | Admin | Create an account with a hashed password |
 | `PUT`, `DELETE` | `/admin/users/:id` | Admin | Update or delete an account; self-delete and last-admin removal are blocked |

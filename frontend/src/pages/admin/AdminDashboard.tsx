@@ -1,44 +1,83 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { apiFetch } from "../../services/api/client";
+
+type DashboardSummary = {
+    totals: { students: number; teachers: number; classes: number; parents: number };
+    attendance: {
+        date: string;
+        recorded: number;
+        present: number;
+        late: number;
+        absent: number;
+        percentage: number | null;
+    };
+};
 
 export default function AdminDashboard() {
+    const [summary, setSummary] = useState<DashboardSummary | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        let active = true;
+        async function loadSummary() {
+            try {
+                const result = await apiFetch<DashboardSummary>("/admin/dashboard");
+                if (active) setSummary(result);
+            } catch (loadError) {
+                if (active) setError(loadError instanceof Error ? loadError.message : "Could not load dashboard summary");
+            } finally {
+                if (active) setLoading(false);
+            }
+        }
+        void loadSummary();
+        return () => { active = false; };
+    }, []);
+
+    const totals = summary?.totals;
+    const metrics = [
+        ["Students", totals?.students],
+        ["Teachers", totals?.teachers],
+        ["Classes", totals?.classes],
+        ["Parents", totals?.parents],
+    ] as const;
+
     return (
         <section>
             <p className="eyebrow">Administration</p>
             <h2>Admin dashboard</h2>
-            <p className="page-intro">
-                Monitor the people and academic structure that make up your
-                school.
-            </p>
-            <div className="stat-grid">
-                <article>
-                    <span>Students</span>
-                    <strong>842</strong>
-                </article>
-                <article>
-                    <span>Teachers</span>
-                    <strong>64</strong>
-                </article>
-                <article>
-                    <span>Classes</span>
-                    <strong>28</strong>
-                </article>
-                <article>
-                    <span>Parents</span>
-                    <strong>731</strong>
-                </article>
+            <p className="page-intro">Monitor the people and academic structure that make up your school.</p>
+
+            {error && <p className="classes-error" role="alert">{error}</p>}
+            <div className="stat-grid" aria-busy={loading}>
+                {metrics.map(([label, value]) => (
+                    <article key={label}>
+                        <span>{label}</span>
+                        <strong>{loading || value === undefined ? "—" : value.toLocaleString()}</strong>
+                    </article>
+                ))}
             </div>
-            <article className="panel">
+
+            <article className="panel dashboard-panel" aria-busy={loading}>
                 <h3>Today's attendance</h3>
-                <strong className="metric">94.2%</strong>
-                <p>
-                    Connect this card to the attendance API when it is
-                    available.
-                </p>
+                {loading ? (
+                    <p role="status">Loading today's attendance…</p>
+                ) : !summary ? (
+                    <p>Attendance summary is unavailable.</p>
+                ) : summary.attendance.percentage === null ? (
+                    <p>No attendance has been recorded today.</p>
+                ) : (
+                    <>
+                        <strong className="metric">{summary.attendance.percentage}%</strong>
+                        <p>
+                            {summary.attendance.recorded} recorded: {summary.attendance.present} present, {summary.attendance.late} late, {summary.attendance.absent} absent.
+                        </p>
+                    </>
+                )}
             </article>
-            <Link
-                to="/admin/teaching-assignments"
-                className="admin-dashboard-card"
-            >
+
+            <Link to="/admin/teaching-assignments" className="admin-dashboard-card">
                 <h3>Teaching Assignments</h3>
                 <p>Assign teachers to classes and subjects.</p>
             </Link>
