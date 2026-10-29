@@ -2,7 +2,8 @@
 # Teacher–Student App
 
 A web application for school administrators, teachers, students, and parents. It supports account and class management, teaching assignments, attendance, assignments and submissions, grades, parent access to linked students, announcements, notifications, and reports.
-<img width="1654" height="2339" alt="Document1" src="https://github.com/user-attachments/assets/4233c1a0-b075-4a82-aaaf-e0f876c34048" />
+<img width="800" height="600" alt="schoolhub_workflow" src="https://github.com/user-attachments/assets/ca60793e-e9e7-49c3-8cf8-da91b09445d6" />
+
 ## Contents
 
 - [What you need](#what-you-need)
